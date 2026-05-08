@@ -375,6 +375,27 @@ curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/scans
 
 The scan skeleton endpoint creates a `pending` `Scan` only when the latest scan readiness decision is `ready_for_scan`. It does not enqueue Celery, launch Playwright, run axe, crawl websites, generate reports, or make legal conclusions. If the candidate is not ready for scan, the endpoint returns a clear conflict response.
 
+## Browser Smoke Probe
+
+The browser smoke probe is a minimal execution foundation for an existing `Scan`. It opens exactly one URL with Playwright, captures lightweight page metadata, stores a `ScanEvidence` record, and marks the scan `done` or `failed`.
+
+Endpoint:
+
+```bash
+curl -X POST http://localhost:8000/scans/{scan_id}/browser-smoke
+```
+
+Captured metadata:
+
+```text
+final_url
+page_title
+http_status
+timestamp
+```
+
+This stage is not a full accessibility audit. It does not run axe, crawl additional pages, submit forms, generate reports, create letters, or make legal conclusions.
+
 ## Validation
 
 GitHub Actions runs the same validation on pull requests and pushes to `main`. The CI workflow does not require Docker, external API keys, Google Places, or browser installation.
