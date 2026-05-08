@@ -11,6 +11,14 @@ class Settings(BaseSettings):
     )
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
+    browser_name: str = "chromium"
+    browser_headless: bool = True
+    browser_navigation_timeout_ms: int = 30_000
+    browser_action_timeout_ms: int = 10_000
+    browser_viewport_width: int = 1440
+    browser_viewport_height: int = 900
+    browser_retries: int = 1
+    browser_wait_until: str = "networkidle"
 
     model_config = SettingsConfigDict(
         env_file=".env",
