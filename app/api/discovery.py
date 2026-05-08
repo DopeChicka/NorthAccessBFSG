@@ -15,6 +15,7 @@ from app.models.company_enrichment import CompanyEnrichment
 from app.models.company_qualification import CompanyQualification
 from app.models.discovery_run import DiscoveryRun
 from app.models.lead_candidate import LeadCandidate
+from app.models.promotion_decision import PromotionDecision
 from app.services.company_enrichment_service import (
     enrich_candidate_with_mock,
     get_latest_enrichment,
@@ -29,6 +30,10 @@ from app.services.discovery_service import (
     create_discovery_run,
     get_discovery_run,
     list_lead_candidates,
+)
+from app.services.promotion_service import (
+    evaluate_candidate_for_promotion,
+    get_latest_promotion_decision,
 )
 from app.services.provider_execution_service import (
     execute_google_places_provider,
@@ -117,6 +122,21 @@ def _serialize_qualification(qualification: CompanyQualification) -> dict[str, A
         "notes": qualification.notes,
         "created_at": _format_datetime(qualification.created_at),
         "updated_at": _format_datetime(qualification.updated_at),
+    }
+
+
+def _serialize_promotion_decision(decision: PromotionDecision) -> dict[str, Any]:
+    return {
+        "id": decision.id,
+        "candidate_id": decision.lead_candidate_id,
+        "company_qualification_id": decision.company_qualification_id,
+        "company_enrichment_id": decision.company_enrichment_id,
+        "status": decision.status.value,
+        "reason_code": decision.reason_code,
+        "reasons": decision.reasons,
+        "confidence_score": decision.confidence_score,
+        "created_at": _format_datetime(decision.created_at),
+        "updated_at": _format_datetime(decision.updated_at),
     }
 
 
@@ -266,3 +286,36 @@ def read_candidate_qualification(
             detail=f"Company qualification not found for candidate: {candidate_id}",
         )
     return _serialize_qualification(qualification)
+
+
+@router.post("/candidates/{candidate_id}/promotion/evaluate")
+def evaluate_candidate_promotion(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        decision = evaluate_candidate_for_promotion(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return {
+        "candidate_id": candidate_id,
+        "promotion_decision_id": decision.id,
+        "status": decision.status.value,
+        "reason_code": decision.reason_code,
+        "confidence_score": decision.confidence_score,
+    }
+
+
+@router.get("/candidates/{candidate_id}/promotion")
+def read_candidate_promotion(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        decision = get_latest_promotion_decision(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if decision is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Promotion decision not found for candidate: {candidate_id}",
+        )
+    return _serialize_promotion_decision(decision)
