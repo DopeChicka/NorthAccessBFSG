@@ -1,3 +1,4 @@
+from app.models.company_enrichment import CompanyEnrichment
 from app.models.company_qualification import (
     CompanyQualification,
     CompanyQualificationStatus,
@@ -11,6 +12,7 @@ from app.models.lead_candidate import LeadCandidate
 from app.models.scan import Scan, ScanStatus
 
 __all__ = [
+    "CompanyEnrichment",
     "CompanyQualification",
     "CompanyQualificationStatus",
     "ComplianceFinding",
