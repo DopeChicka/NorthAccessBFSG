@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from app.discovery.providers.base import ProviderResult
+from app.discovery.providers.base import DiscoveryProvider, ProviderResult
+from app.discovery.providers.google_places_provider import GooglePlacesProvider
 from app.discovery.providers.mock_provider import MockDiscoveryProvider
 from app.models.lead_candidate import LeadCandidate
 from app.services.discovery_service import DiscoveryRunNotFoundError, get_discovery_run
@@ -27,8 +28,19 @@ class ProviderExecutionSummary:
 
 
 def execute_mock_provider(db: Session, discovery_run_id: str) -> ProviderExecutionSummary:
+    return execute_provider(db, discovery_run_id, MockDiscoveryProvider())
+
+
+def execute_google_places_provider(
+    db: Session, discovery_run_id: str
+) -> ProviderExecutionSummary:
+    return execute_provider(db, discovery_run_id, GooglePlacesProvider())
+
+
+def execute_provider(
+    db: Session, discovery_run_id: str, provider: DiscoveryProvider
+) -> ProviderExecutionSummary:
     discovery_run = get_discovery_run(db, discovery_run_id)
-    provider = MockDiscoveryProvider()
     results = provider.search(discovery_run.query_plan)
 
     candidates_created = 0
@@ -91,5 +103,7 @@ def _candidate_from_provider_result(
 __all__ = [
     "DiscoveryRunNotFoundError",
     "ProviderExecutionSummary",
+    "execute_google_places_provider",
     "execute_mock_provider",
+    "execute_provider",
 ]
