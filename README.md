@@ -2,7 +2,7 @@
 
 NorthAccessBFSG is a FastAPI backend foundation for a BFSG/WCAG compliance audit platform.
 
-The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, and company precheck workflows.
+The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, company enrichment, and company precheck workflows.
 
 ## Project Structure
 
@@ -43,16 +43,24 @@ app/
       google_places_provider.py
       mock_provider.py
     query_planner.py
+  enrichment/
+    __init__.py
+    providers/
+      __init__.py
+      base.py
+      mock_company_provider.py
   evidence/
     __init__.py
     hashing.py
     storage.py
     storage_backend.py
   models/
+    company_enrichment.py
     company_qualification.py
     discovery_run.py
     lead_candidate.py
   services/
+    company_enrichment_service.py
     company_qualification_service.py
     discovery_service.py
     provider_execution_service.py
@@ -210,6 +218,30 @@ If disabled or missing configuration, the endpoint returns a clear error and doe
 
 Google Places API results are only seed candidates. Northdata-style or comparable company enrichment is required before any candidate can be treated as qualified for downstream audit consideration.
 
+## Company Enrichment Foundation
+
+`CompanyEnrichment` stores company-data signals for a `LeadCandidate`: legal form, registry ID, source URL, employee count, annual revenue, balance sheet total, raw source payload, and confidence. These records are evidence/signal data only. They do not make legal conclusions or final BFSG applicability decisions.
+
+The mock enrichment provider creates deterministic test data only. It does not call Northdata, scrape company registers, scrape websites, or claim real company data.
+
+```bash
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/enrichment/mock
+curl http://localhost:8000/discovery/candidates/{candidate_id}/enrichment
+```
+
+Example response:
+
+```json
+{
+  "candidate_id": "<candidate-id>",
+  "enrichment_id": "<enrichment-id>",
+  "source": "mock_company_data",
+  "confidence_score": 0.5
+}
+```
+
+A future Northdata or company-register integration should live behind the enrichment provider abstraction. Live company-data calls are not implemented in this foundation step.
+
 ## Company Qualification Precheck
 
 `CompanyQualification` stores precheck signals for a `LeadCandidate`. It is a signal and review layer only. It does not make legal conclusions and it does not call Northdata or any external company-data provider yet.
@@ -221,7 +253,7 @@ curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/qualifica
 curl http://localhost:8000/discovery/candidates/{candidate_id}/qualification
 ```
 
-The precheck records available signals such as company name, category, website availability, optional employee/revenue/balance values if already present, confidence, and review status. Missing company data results in `needs_company_data` or `needs_human_review` rather than final qualification. Mock/test candidates remain clearly marked as test data.
+The precheck uses the latest `CompanyEnrichment` when available. Missing company data results in `needs_company_data` or `needs_human_review`. Microenterprise-like data can signal `likely_not_applicable` or review need. Non-microenterprise-like data can signal `possible_bfsg_candidate` only when category/B2C and website signals are present. These are review signals, not legal scoring or final applicability decisions.
 
 Configured microenterprise signal thresholds:
 
@@ -231,7 +263,7 @@ BFSG_MICROENTERPRISE_REVENUE_THRESHOLD_EUR=2000000
 BFSG_MICROENTERPRISE_BALANCE_THRESHOLD_EUR=2000000
 ```
 
-These thresholds are only used as precheck signals. They are not legal scoring and they are not final applicability decisions.
+These thresholds are only used as precheck signals.
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
 

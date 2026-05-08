@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 from app.api.discovery import router as discovery_router
 from app.db.base import Base
 from app.db.session import get_db
-from app.models import CompanyQualification, DiscoveryRun, LeadCandidate  # noqa: F401
+from app.models import CompanyEnrichment, CompanyQualification, DiscoveryRun, LeadCandidate  # noqa: F401
 
 
 @pytest.fixture()
@@ -146,6 +146,43 @@ def test_google_places_endpoint_disabled_returns_clear_error(db_session: Session
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Google Places API provider is disabled"
+
+
+def test_candidate_enrichment_mock_endpoint_persists_and_reads_latest(
+    db_session: Session,
+) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidate_id = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"][0]["id"]
+
+    enrichment_response = client.post(
+        f"/discovery/candidates/{candidate_id}/enrichment/mock"
+    )
+    read_response = client.get(f"/discovery/candidates/{candidate_id}/enrichment")
+
+    assert enrichment_response.status_code == 200
+    enrichment_summary = enrichment_response.json()
+    assert enrichment_summary["candidate_id"] == candidate_id
+    assert enrichment_summary["source"] == "mock_company_data"
+    assert enrichment_summary["confidence_score"] == 0.2
+
+    assert read_response.status_code == 200
+    enrichment = read_response.json()
+    assert enrichment["id"] == enrichment_summary["enrichment_id"]
+    assert enrichment["candidate_id"] == candidate_id
+    assert enrichment["raw_data"]["mock"] is True
+    assert enrichment["raw_data"]["profile"] == "missing"
+
+
+def test_candidate_enrichment_unknown_candidate_returns_clear_error(db_session: Session) -> None:
+    client = make_client(db_session)
+
+    response = client.post("/discovery/candidates/missing/enrichment/mock")
+
+    assert response.status_code == 404
+    assert "Lead candidate not found: missing" in response.json()["detail"]
 
 
 def test_candidate_qualification_precheck_for_mock_candidate(db_session: Session) -> None:
