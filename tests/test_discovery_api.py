@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 from app.api.discovery import router as discovery_router
 from app.db.base import Base
 from app.db.session import get_db
-from app.models import DiscoveryRun, LeadCandidate  # noqa: F401
+from app.models import CompanyQualification, DiscoveryRun, LeadCandidate  # noqa: F401
 
 
 @pytest.fixture()
@@ -135,6 +135,54 @@ def test_mock_provider_endpoint_persists_candidates(db_session: Session) -> None
     assert candidates[0]["source"] == "mock"
     assert candidates[0]["company_name"].startswith("Mock Candidate Lübeck")
     assert candidates[0]["raw_data"]["mock"] is True
+
+
+def test_google_places_endpoint_disabled_returns_clear_error(db_session: Session) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+
+    response = client.post(f"/discovery/runs/{run_id}/providers/google-places")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Google Places API provider is disabled"
+
+
+def test_candidate_qualification_precheck_for_mock_candidate(db_session: Session) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidates = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"]
+    candidate_id = candidates[0]["id"]
+
+    precheck_response = client.post(
+        f"/discovery/candidates/{candidate_id}/qualification/precheck"
+    )
+    read_response = client.get(f"/discovery/candidates/{candidate_id}/qualification")
+
+    assert precheck_response.status_code == 200
+    precheck = precheck_response.json()
+    assert precheck["candidate_id"] == candidate_id
+    assert precheck["status"] == "needs_human_review"
+    assert precheck["is_microenterprise"] is None
+    assert precheck["confidence_score"] == 0.1
+
+    assert read_response.status_code == 200
+    qualification = read_response.json()
+    assert qualification["candidate_id"] == candidate_id
+    assert qualification["status"] == "needs_human_review"
+    assert qualification["evidence"]["is_mock_or_test_data"] is True
+    assert qualification["evidence"]["requires_company_enrichment"] is True
+
+
+def test_qualification_unknown_candidate_returns_clear_error(db_session: Session) -> None:
+    client = make_client(db_session)
+
+    response = client.post("/discovery/candidates/missing/qualification/precheck")
+
+    assert response.status_code == 404
+    assert "Lead candidate not found: missing" in response.json()["detail"]
 
 
 def test_mock_provider_endpoint_unknown_run_returns_clear_error(db_session: Session) -> None:
