@@ -2,7 +2,7 @@
 
 NorthAccessBFSG is a FastAPI backend foundation for a BFSG/WCAG compliance audit platform.
 
-The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, company enrichment, and company precheck workflows.
+The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, company enrichment, company precheck, and internal promotion routing workflows.
 
 ## Project Structure
 
@@ -59,10 +59,12 @@ app/
     company_qualification.py
     discovery_run.py
     lead_candidate.py
+    promotion_decision.py
   services/
     company_enrichment_service.py
     company_qualification_service.py
     discovery_service.py
+    promotion_service.py
     provider_execution_service.py
   workers/
 data/
@@ -264,6 +266,37 @@ BFSG_MICROENTERPRISE_BALANCE_THRESHOLD_EUR=2000000
 ```
 
 These thresholds are only used as precheck signals.
+
+## Promotion Gate
+
+`PromotionDecision` stores an internal routing decision for a `LeadCandidate` after company enrichment and qualification precheck. The possible routing statuses are:
+
+```text
+rejected
+needs_review
+ready_for_website_probe
+```
+
+Promotion endpoints:
+
+```bash
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/promotion/evaluate
+curl http://localhost:8000/discovery/candidates/{candidate_id}/promotion
+```
+
+Example response:
+
+```json
+{
+  "candidate_id": "<candidate-id>",
+  "promotion_decision_id": "<decision-id>",
+  "status": "needs_review",
+  "reason_code": "mock_or_test_data",
+  "confidence_score": 0.2
+}
+```
+
+The Promotion Gate is only internal routing. `ready_for_website_probe` means the candidate can move to a future Website Probe stage. It does not mean a BFSG obligation, an accessibility issue, or any violation has been established. The Website Probe stage is not implemented in this step.
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
 
