@@ -15,6 +15,7 @@ from app.services.discovery_service import (
     get_discovery_run,
     list_lead_candidates,
 )
+from app.services.provider_execution_service import execute_mock_provider
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
 
@@ -105,6 +106,15 @@ def read_run(run_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     except DiscoveryRunNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return _serialize_discovery_run(discovery_run)
+
+
+@router.post("/runs/{run_id}/providers/mock")
+def run_mock_provider(run_id: str, db: Session = Depends(get_db)) -> dict[str, str | int]:
+    try:
+        summary = execute_mock_provider(db, run_id)
+    except DiscoveryRunNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return summary.to_dict()
 
 
 @router.get("/runs/{run_id}/candidates")
