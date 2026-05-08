@@ -13,6 +13,7 @@ from app.models import (  # noqa: F401
     LeadCandidate,
     PromotionDecision,
     Scan,
+    WebsiteProbe,
 )
 
 _SCAN_ENUM_UPDATES = (

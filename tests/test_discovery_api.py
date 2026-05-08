@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
     DiscoveryRun,
     LeadCandidate,
     PromotionDecision,
+    WebsiteProbe,
 )
 
 
@@ -248,6 +249,47 @@ def test_candidate_promotion_endpoint_evaluates_and_reads_latest(
     assert promotion["candidate_id"] == candidate_id
     assert promotion["status"] == "needs_review"
     assert promotion["reasons"]["no_legal_conclusion"] is True
+
+
+def test_candidate_website_probe_endpoint_runs_and_reads_latest(
+    db_session: Session,
+) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidate_id = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"][0]["id"]
+    client.post(f"/discovery/candidates/{candidate_id}/enrichment/mock")
+    client.post(f"/discovery/candidates/{candidate_id}/qualification/precheck")
+    client.post(f"/discovery/candidates/{candidate_id}/promotion/evaluate")
+
+    probe_response = client.post(
+        f"/discovery/candidates/{candidate_id}/website-probe/mock"
+    )
+    read_response = client.get(f"/discovery/candidates/{candidate_id}/website-probe")
+
+    assert probe_response.status_code == 200
+    probe_summary = probe_response.json()
+    assert probe_summary["candidate_id"] == candidate_id
+    assert probe_summary["status"] == "skipped"
+    assert probe_summary["confidence_score"] == 0.2
+
+    assert read_response.status_code == 200
+    probe = read_response.json()
+    assert probe["id"] == probe_summary["website_probe_id"]
+    assert probe["candidate_id"] == candidate_id
+    assert probe["status"] == "skipped"
+    assert probe["evidence"]["missing_domain"] is True
+    assert probe["evidence"]["no_legal_conclusion"] is True
+
+
+def test_website_probe_unknown_candidate_returns_clear_error(db_session: Session) -> None:
+    client = make_client(db_session)
+
+    response = client.post("/discovery/candidates/missing/website-probe/mock")
+
+    assert response.status_code == 404
+    assert "Lead candidate not found: missing" in response.json()["detail"]
 
 
 def test_promotion_unknown_candidate_returns_clear_error(db_session: Session) -> None:

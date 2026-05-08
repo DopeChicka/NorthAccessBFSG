@@ -16,6 +16,7 @@ from app.models.company_qualification import CompanyQualification
 from app.models.discovery_run import DiscoveryRun
 from app.models.lead_candidate import LeadCandidate
 from app.models.promotion_decision import PromotionDecision
+from app.models.website_probe import WebsiteProbe
 from app.services.company_enrichment_service import (
     enrich_candidate_with_mock,
     get_latest_enrichment,
@@ -38,6 +39,10 @@ from app.services.promotion_service import (
 from app.services.provider_execution_service import (
     execute_google_places_provider,
     execute_mock_provider,
+)
+from app.services.website_probe_service import (
+    get_latest_website_probe,
+    run_mock_website_probe,
 )
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
@@ -137,6 +142,29 @@ def _serialize_promotion_decision(decision: PromotionDecision) -> dict[str, Any]
         "confidence_score": decision.confidence_score,
         "created_at": _format_datetime(decision.created_at),
         "updated_at": _format_datetime(decision.updated_at),
+    }
+
+
+def _serialize_website_probe(probe: WebsiteProbe) -> dict[str, Any]:
+    return {
+        "id": probe.id,
+        "candidate_id": probe.lead_candidate_id,
+        "promotion_decision_id": probe.promotion_decision_id,
+        "url": probe.url,
+        "normalized_domain": probe.normalized_domain,
+        "status": probe.status.value,
+        "http_status": probe.http_status,
+        "has_homepage_signal": probe.has_homepage_signal,
+        "has_impressum_signal": probe.has_impressum_signal,
+        "has_login_signal": probe.has_login_signal,
+        "has_shop_signal": probe.has_shop_signal,
+        "has_booking_signal": probe.has_booking_signal,
+        "has_checkout_signal": probe.has_checkout_signal,
+        "has_b2c_transaction_signal": probe.has_b2c_transaction_signal,
+        "evidence": probe.evidence,
+        "confidence_score": probe.confidence_score,
+        "created_at": _format_datetime(probe.created_at),
+        "updated_at": _format_datetime(probe.updated_at),
     }
 
 
@@ -319,3 +347,35 @@ def read_candidate_promotion(
             detail=f"Promotion decision not found for candidate: {candidate_id}",
         )
     return _serialize_promotion_decision(decision)
+
+
+@router.post("/candidates/{candidate_id}/website-probe/mock")
+def run_candidate_website_probe(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        probe = run_mock_website_probe(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return {
+        "candidate_id": candidate_id,
+        "website_probe_id": probe.id,
+        "status": probe.status.value,
+        "confidence_score": probe.confidence_score,
+    }
+
+
+@router.get("/candidates/{candidate_id}/website-probe")
+def read_candidate_website_probe(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        probe = get_latest_website_probe(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if probe is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Website probe not found for candidate: {candidate_id}",
+        )
+    return _serialize_website_probe(probe)
