@@ -8,7 +8,13 @@ from sqlalchemy.pool import StaticPool
 from app.api.discovery import router as discovery_router
 from app.db.base import Base
 from app.db.session import get_db
-from app.models import CompanyEnrichment, CompanyQualification, DiscoveryRun, LeadCandidate  # noqa: F401
+from app.models import (  # noqa: F401
+    CompanyEnrichment,
+    CompanyQualification,
+    DiscoveryRun,
+    LeadCandidate,
+    PromotionDecision,
+)
 
 
 @pytest.fixture()
@@ -211,6 +217,46 @@ def test_candidate_qualification_precheck_for_mock_candidate(db_session: Session
     assert qualification["status"] == "needs_human_review"
     assert qualification["evidence"]["is_mock_or_test_data"] is True
     assert qualification["evidence"]["requires_company_enrichment"] is True
+
+
+def test_candidate_promotion_endpoint_evaluates_and_reads_latest(
+    db_session: Session,
+) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidate_id = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"][0]["id"]
+    client.post(f"/discovery/candidates/{candidate_id}/enrichment/mock")
+    client.post(f"/discovery/candidates/{candidate_id}/qualification/precheck")
+
+    evaluate_response = client.post(
+        f"/discovery/candidates/{candidate_id}/promotion/evaluate"
+    )
+    read_response = client.get(f"/discovery/candidates/{candidate_id}/promotion")
+
+    assert evaluate_response.status_code == 200
+    evaluation = evaluate_response.json()
+    assert evaluation["candidate_id"] == candidate_id
+    assert evaluation["status"] == "needs_review"
+    assert evaluation["reason_code"] == "mock_or_test_data"
+    assert evaluation["confidence_score"] == 0.2
+
+    assert read_response.status_code == 200
+    promotion = read_response.json()
+    assert promotion["id"] == evaluation["promotion_decision_id"]
+    assert promotion["candidate_id"] == candidate_id
+    assert promotion["status"] == "needs_review"
+    assert promotion["reasons"]["no_legal_conclusion"] is True
+
+
+def test_promotion_unknown_candidate_returns_clear_error(db_session: Session) -> None:
+    client = make_client(db_session)
+
+    response = client.post("/discovery/candidates/missing/promotion/evaluate")
+
+    assert response.status_code == 404
+    assert "Lead candidate not found: missing" in response.json()["detail"]
 
 
 def test_qualification_unknown_candidate_returns_clear_error(db_session: Session) -> None:

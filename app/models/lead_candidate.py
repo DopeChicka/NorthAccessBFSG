@@ -50,3 +50,8 @@ class LeadCandidate(Base):
         back_populates="lead_candidate",
         cascade="all, delete-orphan",
     )
+    promotion_decisions: Mapped[list["PromotionDecision"]] = relationship(
+        "PromotionDecision",
+        back_populates="lead_candidate",
+        cascade="all, delete-orphan",
+    )
