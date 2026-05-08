@@ -15,6 +15,11 @@ from app.models.promotion_decision import (
     PromotionReasonCode,
 )
 from app.models.scan import Scan, ScanStatus
+from app.models.scan_readiness_decision import (
+    ScanReadinessDecision,
+    ScanReadinessReasonCode,
+    ScanReadinessStatus,
+)
 from app.models.website_probe import WebsiteProbe, WebsiteProbeStatus
 
 __all__ = [
@@ -32,6 +37,9 @@ __all__ = [
     "PromotionDecisionStatus",
     "PromotionReasonCode",
     "Scan",
+    "ScanReadinessDecision",
+    "ScanReadinessReasonCode",
+    "ScanReadinessStatus",
     "ScanStatus",
     "WebsiteProbe",
     "WebsiteProbeStatus",

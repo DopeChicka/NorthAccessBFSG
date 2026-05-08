@@ -355,6 +355,26 @@ These signals only help decide whether a future full scan may be worth schedulin
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
 
+## Scan Readiness Gate
+
+`ScanReadinessDecision` stores the internal routing decision between Website Probe and future scan execution. It combines the latest `PromotionDecision` and `WebsiteProbe` for a `LeadCandidate` and can return:
+
+```text
+rejected
+needs_review
+ready_for_scan
+```
+
+Scan readiness endpoints:
+
+```bash
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/scan-readiness/evaluate
+curl http://localhost:8000/discovery/candidates/{candidate_id}/scan-readiness
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/scans
+```
+
+The scan skeleton endpoint creates a `pending` `Scan` only when the latest scan readiness decision is `ready_for_scan`. It does not enqueue Celery, launch Playwright, run axe, crawl websites, generate reports, or make legal conclusions. If the candidate is not ready for scan, the endpoint returns a clear conflict response.
+
 ## Validation
 
 GitHub Actions runs the same validation on pull requests and pushes to `main`. The CI workflow does not require Docker, external API keys, Google Places, or browser installation.

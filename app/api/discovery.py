@@ -16,6 +16,8 @@ from app.models.company_qualification import CompanyQualification
 from app.models.discovery_run import DiscoveryRun
 from app.models.lead_candidate import LeadCandidate
 from app.models.promotion_decision import PromotionDecision
+from app.models.scan import Scan
+from app.models.scan_readiness_decision import ScanReadinessDecision
 from app.models.website_probe import WebsiteProbe
 from app.services.company_enrichment_service import (
     enrich_candidate_with_mock,
@@ -39,6 +41,12 @@ from app.services.promotion_service import (
 from app.services.provider_execution_service import (
     execute_google_places_provider,
     execute_mock_provider,
+)
+from app.services.scan_readiness_service import (
+    ScanReadinessNotReadyError,
+    create_scan_skeleton_for_candidate,
+    evaluate_candidate_for_scan_readiness,
+    get_latest_scan_readiness_decision,
 )
 from app.services.website_probe_service import (
     get_latest_website_probe,
@@ -167,6 +175,33 @@ def _serialize_website_probe(probe: WebsiteProbe) -> dict[str, Any]:
         "confidence_score": probe.confidence_score,
         "created_at": _format_datetime(probe.created_at),
         "updated_at": _format_datetime(probe.updated_at),
+    }
+
+
+def _serialize_scan_readiness_decision(
+    decision: ScanReadinessDecision,
+) -> dict[str, Any]:
+    return {
+        "id": decision.id,
+        "candidate_id": decision.lead_candidate_id,
+        "promotion_decision_id": decision.promotion_decision_id,
+        "website_probe_id": decision.website_probe_id,
+        "status": decision.status.value,
+        "reason_code": decision.reason_code,
+        "reasons": decision.reasons,
+        "confidence_score": decision.confidence_score,
+        "created_at": _format_datetime(decision.created_at),
+        "updated_at": _format_datetime(decision.updated_at),
+    }
+
+
+def _serialize_scan_skeleton(scan: Scan) -> dict[str, Any]:
+    return {
+        "scan_id": scan.id,
+        "lead_id": scan.lead_id,
+        "status": scan.status.value,
+        "evidence_metadata": scan.evidence_metadata,
+        "created_at": _format_datetime(scan.created_at),
     }
 
 
@@ -402,3 +437,49 @@ def read_candidate_website_probe(
             detail=f"Website probe not found for candidate: {candidate_id}",
         )
     return _serialize_website_probe(probe)
+
+
+@router.post("/candidates/{candidate_id}/scan-readiness/evaluate")
+def evaluate_candidate_scan_readiness(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        decision = evaluate_candidate_for_scan_readiness(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return {
+        "candidate_id": candidate_id,
+        "scan_readiness_decision_id": decision.id,
+        "status": decision.status.value,
+        "reason_code": decision.reason_code,
+        "confidence_score": decision.confidence_score,
+    }
+
+
+@router.get("/candidates/{candidate_id}/scan-readiness")
+def read_candidate_scan_readiness(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        decision = get_latest_scan_readiness_decision(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if decision is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scan readiness decision not found for candidate: {candidate_id}",
+        )
+    return _serialize_scan_readiness_decision(decision)
+
+
+@router.post("/candidates/{candidate_id}/scans", status_code=status.HTTP_201_CREATED)
+def create_candidate_scan_skeleton(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        scan = create_scan_skeleton_for_candidate(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ScanReadinessNotReadyError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return _serialize_scan_skeleton(scan)
