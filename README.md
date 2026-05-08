@@ -37,13 +37,17 @@ app/
     __init__.py
     keywords.py
     place_resolver.py
+    query_planner.py
   evidence/
     __init__.py
     hashing.py
     storage.py
     storage_backend.py
   models/
+    discovery_run.py
+    lead_candidate.py
   services/
+    discovery_service.py
   workers/
 data/
   orte_deutschland.csv
@@ -124,7 +128,34 @@ Example place response:
 }
 ```
 
-This is only the resolver and keyword foundation for later lead discovery. It is not a live Google Maps API integration. It does not scrape websites and does not call external discovery providers.
+## Discovery Query Planner
+
+A discovery run is a dry-run planning record. It resolves a city to postal codes, combines those postal codes with enabled keyword groups, and persists a deterministic query plan for a later external provider integration.
+
+```bash
+curl -X POST http://localhost:8000/discovery/runs/Lübeck
+```
+
+Example response:
+
+```json
+{
+  "discovery_run_id": "<run-id>",
+  "city": "Lübeck",
+  "status": "done",
+  "postal_codes_count": 12,
+  "query_count": 336
+}
+```
+
+Fetch a stored run and its candidate list:
+
+```bash
+curl http://localhost:8000/discovery/runs/{discovery_run_id}
+curl http://localhost:8000/discovery/runs/{discovery_run_id}/candidates
+```
+
+This is only a resolver, keyword, and query-planner foundation. It is not a live Google Maps API integration. It does not scrape websites and does not call external discovery providers. `LeadCandidate` rows are candidate records only; they are not confirmed legal applicability, BFSG violations, or legal conclusions.
 
 ## Guarded Pipeline
 
