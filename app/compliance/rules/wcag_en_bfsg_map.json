@@ -1,0 +1,296 @@
+{
+  "version": "2026.05.08-001",
+  "standard_versions": {
+    "wcag": ["2.1", "2.2"],
+    "en_301_549": "V3.2.1 web clause 9 mapping",
+    "bfsg": "BFSG digital service accessibility relevance categories"
+  },
+  "severity_normalization_rules": {
+    "axe_impact_to_platform_severity": {
+      "critical": "critical",
+      "serious": "high",
+      "high": "high",
+      "moderate": "medium",
+      "medium": "medium",
+      "minor": "low",
+      "low": "low",
+      "info": "info",
+      "unknown": "info"
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "image-alt",
+      "wcag_references": ["1.1.1"],
+      "en_301_549_references": ["9.1.1.1"],
+      "bfsg_category": "perceivable_text_alternatives",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "input-image-alt",
+      "wcag_references": ["1.1.1"],
+      "en_301_549_references": ["9.1.1.1"],
+      "bfsg_category": "perceivable_text_alternatives",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "area-alt",
+      "wcag_references": ["1.1.1"],
+      "en_301_549_references": ["9.1.1.1"],
+      "bfsg_category": "perceivable_text_alternatives",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "svg-img-alt",
+      "wcag_references": ["1.1.1"],
+      "en_301_549_references": ["9.1.1.1"],
+      "bfsg_category": "perceivable_text_alternatives",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "object-alt",
+      "wcag_references": ["1.1.1"],
+      "en_301_549_references": ["9.1.1.1"],
+      "bfsg_category": "perceivable_text_alternatives",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "color-contrast",
+      "wcag_references": ["1.4.3"],
+      "en_301_549_references": ["9.1.4.3"],
+      "bfsg_category": "perceivable_visual_contrast",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "meta-viewport",
+      "wcag_references": ["1.4.4"],
+      "en_301_549_references": ["9.1.4.4"],
+      "bfsg_category": "perceivable_text_resize",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "html-has-lang",
+      "wcag_references": ["3.1.1"],
+      "en_301_549_references": ["9.3.1.1"],
+      "bfsg_category": "understandable_language",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "html-lang-valid",
+      "wcag_references": ["3.1.1"],
+      "en_301_549_references": ["9.3.1.1"],
+      "bfsg_category": "understandable_language",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "document-title",
+      "wcag_references": ["2.4.2"],
+      "en_301_549_references": ["9.2.4.2"],
+      "bfsg_category": "operable_navigation",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "bypass",
+      "wcag_references": ["2.4.1"],
+      "en_301_549_references": ["9.2.4.1"],
+      "bfsg_category": "operable_navigation",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "link-name",
+      "wcag_references": ["2.4.4", "4.1.2"],
+      "en_301_549_references": ["9.2.4.4", "9.4.1.2"],
+      "bfsg_category": "operable_navigation_and_names",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "button-name",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_name_role_value",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "label",
+      "wcag_references": ["1.3.1", "3.3.2", "4.1.2"],
+      "en_301_549_references": ["9.1.3.1", "9.3.3.2", "9.4.1.2"],
+      "bfsg_category": "understandable_forms",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "select-name",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_name_role_value",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "aria-input-field-name",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_name_role_value",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "aria-command-name",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_name_role_value",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "aria-toggle-field-name",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_name_role_value",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "aria-allowed-attr",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "aria-required-attr",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "aria-required-children",
+      "wcag_references": ["1.3.1", "4.1.2"],
+      "en_301_549_references": ["9.1.3.1", "9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "aria-required-parent",
+      "wcag_references": ["1.3.1", "4.1.2"],
+      "en_301_549_references": ["9.1.3.1", "9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "aria-roles",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "aria-valid-attr",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "aria-valid-attr-value",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "aria-hidden-focus",
+      "wcag_references": ["2.1.1", "4.1.2"],
+      "en_301_549_references": ["9.2.1.1", "9.4.1.2"],
+      "bfsg_category": "operable_keyboard_and_focus",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "accesskeys",
+      "wcag_references": ["2.1.4"],
+      "en_301_549_references": ["9.2.1.4"],
+      "bfsg_category": "operable_keyboard_shortcuts",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "tabindex",
+      "wcag_references": ["2.4.3"],
+      "en_301_549_references": ["9.2.4.3"],
+      "bfsg_category": "operable_focus_order",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "frame-title",
+      "wcag_references": ["2.4.1", "4.1.2"],
+      "en_301_549_references": ["9.2.4.1", "9.4.1.2"],
+      "bfsg_category": "operable_navigation_and_names",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "meta-refresh",
+      "wcag_references": ["2.2.1", "2.2.2"],
+      "en_301_549_references": ["9.2.2.1", "9.2.2.2"],
+      "bfsg_category": "operable_timing",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "duplicate-id",
+      "wcag_references": ["4.1.1"],
+      "en_301_549_references": ["9.4.1.1"],
+      "bfsg_category": "robust_parsing",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "duplicate-id-active",
+      "wcag_references": ["4.1.1"],
+      "en_301_549_references": ["9.4.1.1"],
+      "bfsg_category": "robust_parsing",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "duplicate-id-aria",
+      "wcag_references": ["4.1.1", "4.1.2"],
+      "en_301_549_references": ["9.4.1.1", "9.4.1.2"],
+      "bfsg_category": "robust_parsing_and_semantics",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    },
+    {
+      "rule_id": "heading-order",
+      "wcag_references": ["1.3.1"],
+      "en_301_549_references": ["9.1.3.1"],
+      "bfsg_category": "perceivable_structure",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "landmark-one-main",
+      "wcag_references": ["1.3.1"],
+      "en_301_549_references": ["9.1.3.1"],
+      "bfsg_category": "perceivable_structure",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "region",
+      "wcag_references": ["1.3.1"],
+      "en_301_549_references": ["9.1.3.1"],
+      "bfsg_category": "perceivable_structure",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "list",
+      "wcag_references": ["1.3.1"],
+      "en_301_549_references": ["9.1.3.1"],
+      "bfsg_category": "perceivable_structure",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "listitem",
+      "wcag_references": ["1.3.1"],
+      "en_301_549_references": ["9.1.3.1"],
+      "bfsg_category": "perceivable_structure",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "medium"}
+    },
+    {
+      "rule_id": "nested-interactive",
+      "wcag_references": ["4.1.2"],
+      "en_301_549_references": ["9.4.1.2"],
+      "bfsg_category": "robust_name_role_value",
+      "severity_mapping": {"strategy": "axe_impact_to_platform_severity", "default": "high"}
+    }
+  ]
+}
