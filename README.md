@@ -90,6 +90,12 @@ pending -> running -> processing -> done
 
 If task execution fails, the worker marks the scan as `failed` and stores `error_message`.
 
+Inspect scan status and evidence metadata:
+
+```bash
+docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT id, status, error_message, evidence_metadata->>'current_url' AS current_url FROM scans;"
+```
+
 Inspect stored findings:
 
 ```bash
