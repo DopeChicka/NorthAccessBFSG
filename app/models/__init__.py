@@ -15,6 +15,7 @@ from app.models.promotion_decision import (
     PromotionReasonCode,
 )
 from app.models.scan import Scan, ScanStatus
+from app.models.website_probe import WebsiteProbe, WebsiteProbeStatus
 
 __all__ = [
     "CompanyEnrichment",
@@ -32,4 +33,6 @@ __all__ = [
     "PromotionReasonCode",
     "Scan",
     "ScanStatus",
+    "WebsiteProbe",
+    "WebsiteProbeStatus",
 ]
