@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.api.discovery import router as discovery_router
 from app.db.base import Base
@@ -12,7 +13,11 @@ from app.models import DiscoveryRun, LeadCandidate  # noqa: F401
 
 @pytest.fixture()
 def db_session() -> Session:
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     TestingSessionLocal = sessionmaker(bind=engine)
     Base.metadata.create_all(bind=engine)
 
