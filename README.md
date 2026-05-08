@@ -37,6 +37,10 @@ app/
     __init__.py
     keywords.py
     place_resolver.py
+    providers/
+      __init__.py
+      base.py
+      mock_provider.py
     query_planner.py
   evidence/
     __init__.py
@@ -48,6 +52,7 @@ app/
     lead_candidate.py
   services/
     discovery_service.py
+    provider_execution_service.py
   workers/
 data/
   orte_deutschland.csv
@@ -155,7 +160,27 @@ curl http://localhost:8000/discovery/runs/{discovery_run_id}
 curl http://localhost:8000/discovery/runs/{discovery_run_id}/candidates
 ```
 
-This is only a resolver, keyword, and query-planner foundation. It is not a live Google Maps API integration. It does not scrape websites and does not call external discovery providers. `LeadCandidate` rows are candidate records only; they are not confirmed legal applicability, BFSG violations, or legal conclusions.
+## Mock Discovery Provider
+
+The mock provider executes a stored discovery run query plan and persists bounded, deterministic test candidates. It creates obvious mock rows only, for example `Mock Candidate Lübeck 23552 Online Shop`.
+
+```bash
+curl -X POST http://localhost:8000/discovery/runs/{discovery_run_id}/providers/mock
+curl http://localhost:8000/discovery/runs/{discovery_run_id}/candidates
+```
+
+Example provider response:
+
+```json
+{
+  "discovery_run_id": "<run-id>",
+  "provider": "mock",
+  "candidates_created": 10,
+  "candidates_total": 10
+}
+```
+
+This is only a resolver, keyword, query-planner, and mock-provider persistence foundation. Google Maps and live providers are not integrated yet. The system does not scrape websites and does not call external discovery providers. `LeadCandidate` rows are candidate records only; they are not confirmed legal applicability, BFSG violations, or legal conclusions.
 
 ## Guarded Pipeline
 
