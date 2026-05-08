@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.services.browser_smoke_service import (
+    BrowserSmokeProbeError,
+    ScanNotFoundError,
+    run_browser_smoke_probe,
+)
 from app.services.scan_service import LeadNotFoundError, ScanQueueError, create_scan_job
 
 router = APIRouter(prefix="/scans", tags=["scans"])
@@ -22,3 +27,27 @@ def run_scan(lead_id: str, db: Session = Depends(get_db)) -> dict[str, str]:
         ) from exc
 
     return {"scan_id": scan.id}
+
+
+@router.post("/{scan_id}/browser-smoke")
+def run_browser_smoke(scan_id: str, db: Session = Depends(get_db)) -> dict[str, object]:
+    try:
+        evidence = run_browser_smoke_probe(db, scan_id)
+    except ScanNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except BrowserSmokeProbeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return {
+        "scan_id": evidence.scan_id,
+        "evidence_id": evidence.id,
+        "evidence_type": evidence.evidence_type,
+        "path_or_key": evidence.path_or_key,
+        "metadata": evidence.evidence_metadata,
+    }
