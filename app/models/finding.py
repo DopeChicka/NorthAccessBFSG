@@ -24,4 +24,4 @@ class Finding(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    scan: Mapped[Scan] = relationship(back_populates="findings")
+    scan: Mapped["Scan"] = relationship("Scan", back_populates="findings")
