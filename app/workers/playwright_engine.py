@@ -12,6 +12,7 @@ from axe_playwright_python.sync_playwright import Axe
 from playwright.sync_api import sync_playwright
 
 from app.core.browser_config import BrowserConfig, get_browser_config
+from app.evidence.storage import EvidenceArtifact
 
 _SEVERITY_BY_AXE_IMPACT = {
     "critical": "critical",
@@ -44,6 +45,7 @@ class PlaywrightScanResult:
     current_url: str
     captured_at: str
     evidence_metadata: dict[str, Any]
+    evidence_artifacts: list[EvidenceArtifact]
     findings: list[EngineFinding]
 
 
@@ -101,9 +103,31 @@ def _run_once(
             dom_snapshot = page.content()
             screenshot_bytes = page.screenshot(full_page=True)
             accessibility_tree = _capture_accessibility_tree(page)
+            accessibility_tree_json = _json_dump(accessibility_tree)
             current_url = page.url
+            evidence_artifacts = [
+                EvidenceArtifact(
+                    type="screenshot",
+                    content=screenshot_bytes,
+                    content_type="image/png",
+                    extension="png",
+                ),
+                EvidenceArtifact(
+                    type="dom",
+                    content=dom_snapshot.encode("utf-8"),
+                    content_type="text/html; charset=utf-8",
+                    extension="html",
+                ),
+                EvidenceArtifact(
+                    type="a11y_tree",
+                    content=accessibility_tree_json.encode("utf-8"),
+                    content_type="application/json",
+                    extension="json",
+                ),
+            ]
             evidence_metadata = _build_scan_evidence_metadata(
                 accessibility_tree=accessibility_tree,
+                accessibility_tree_json=accessibility_tree_json,
                 axe_response=axe_response,
                 captured_at=captured_at,
                 config=config,
@@ -120,6 +144,7 @@ def _run_once(
                 current_url=current_url,
                 captured_at=captured_at,
                 evidence_metadata=evidence_metadata,
+                evidence_artifacts=evidence_artifacts,
                 findings=findings,
             )
         finally:
@@ -136,6 +161,7 @@ def _capture_accessibility_tree(page) -> dict[str, Any] | None:
 def _build_scan_evidence_metadata(
     *,
     accessibility_tree: dict[str, Any] | None,
+    accessibility_tree_json: str,
     axe_response: dict[str, Any],
     captured_at: str,
     config: BrowserConfig,
@@ -145,8 +171,6 @@ def _build_scan_evidence_metadata(
     target_url: str,
     attempt: int,
 ) -> dict[str, Any]:
-    accessibility_tree_json = _json_dump(accessibility_tree) if accessibility_tree else None
-
     return {
         "target_url": target_url,
         "current_url": current_url,
@@ -182,9 +206,7 @@ def _build_scan_evidence_metadata(
             "storage": "pending",
             "available": accessibility_tree is not None,
             "node_count": _count_accessibility_nodes(accessibility_tree),
-            "sha256": _sha256_text(accessibility_tree_json)
-            if accessibility_tree_json
-            else None,
+            "sha256": _sha256_text(accessibility_tree_json),
         },
     }
 
