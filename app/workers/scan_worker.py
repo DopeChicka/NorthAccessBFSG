@@ -1,11 +1,13 @@
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.core.celery import celery_app
 from app.db.session import SessionLocal
-from app.models import Finding, Scan, ScanStatus
+from app.models import EvidenceBundle, Finding, Scan, ScanStatus
+from app.services.evidence_service import persist_finding_evidence_refs, persist_scan_evidence
 from app.workers.playwright_engine import PlaywrightScanResult, run_accessibility_scan
 
 logger = logging.getLogger(__name__)
@@ -39,10 +41,20 @@ def run_scan_task(scan_id: str) -> str:
             return scan_id
 
         scan.status = ScanStatus.processing
-        scan.evidence_metadata = scan_result.evidence_metadata
+        global_evidence_bundles = persist_scan_evidence(
+            db, scan_id=scan_id, artifacts=scan_result.evidence_artifacts
+        )
+        scan.evidence_metadata = _with_evidence_bundle_metadata(
+            scan_result.evidence_metadata, global_evidence_bundles
+        )
         db.commit()
 
-        _persist_findings(db, scan_id=scan_id, scan_result=scan_result)
+        _persist_findings(
+            db,
+            scan_id=scan_id,
+            scan_result=scan_result,
+            source_evidence_bundles=global_evidence_bundles,
+        )
 
         scan = db.get(Scan, scan_id)
         if scan is not None:
@@ -67,25 +79,64 @@ def run_scan_task(scan_id: str) -> str:
 
 
 def _persist_findings(
-    db: Session, *, scan_id: str, scan_result: PlaywrightScanResult
+    db: Session,
+    *,
+    scan_id: str,
+    scan_result: PlaywrightScanResult,
+    source_evidence_bundles: list[EvidenceBundle],
 ) -> None:
     db.query(Finding).filter(Finding.scan_id == scan_id).delete(synchronize_session=False)
+    db.flush()
 
     for engine_finding in scan_result.findings:
-        db.add(
-            Finding(
-                scan_id=scan_id,
-                rule_id=engine_finding.rule_id,
-                severity=engine_finding.severity,
-                description=engine_finding.description,
-                help_url=engine_finding.help_url,
-                wcag_refs=engine_finding.wcag_refs,
-                confidence_score=engine_finding.confidence_score,
-                evidence_metadata=engine_finding.evidence_metadata,
-            )
+        finding = Finding(
+            scan_id=scan_id,
+            rule_id=engine_finding.rule_id,
+            severity=engine_finding.severity,
+            description=engine_finding.description,
+            help_url=engine_finding.help_url,
+            wcag_refs=engine_finding.wcag_refs,
+            confidence_score=engine_finding.confidence_score,
+            evidence_metadata=engine_finding.evidence_metadata,
+        )
+        db.add(finding)
+        db.flush()
+
+        finding_evidence_bundles = persist_finding_evidence_refs(
+            db,
+            scan_id=scan_id,
+            finding_id=finding.id,
+            source_bundles=source_evidence_bundles,
+        )
+        finding.evidence_metadata = _with_evidence_bundle_metadata(
+            engine_finding.evidence_metadata, finding_evidence_bundles
         )
 
     db.commit()
+
+
+def _with_evidence_bundle_metadata(
+    metadata: dict[str, Any], bundles: list[EvidenceBundle]
+) -> dict[str, Any]:
+    return {
+        **metadata,
+        "evidence_bundles": [
+            {
+                "id": bundle.id,
+                "type": bundle.type,
+                "storage_backend": bundle.storage_backend,
+                "storage_path": bundle.storage_path,
+                "content_type": bundle.content_type,
+                "size_bytes": bundle.size_bytes,
+                "version": bundle.version,
+                "hash": bundle.hash,
+                "previous_hash": bundle.previous_hash,
+                "chain_hash": bundle.chain_hash,
+                "fingerprint": bundle.fingerprint,
+            }
+            for bundle in bundles
+        ],
+    }
 
 
 def _mark_scan_failed(db: Session, scan_id: str, error: Exception) -> None:
