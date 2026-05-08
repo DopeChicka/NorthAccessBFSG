@@ -24,7 +24,11 @@ class Finding(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     help_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     wcag_refs: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    evidence: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    review_status: Mapped[str] = mapped_column(
+        String(50), default="pending", nullable=False, index=True
+    )
     evidence_metadata: Mapped[dict[str, Any]] = mapped_column(
         JSON, default=dict, nullable=False
     )

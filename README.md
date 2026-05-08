@@ -396,6 +396,18 @@ timestamp
 
 This stage is not a full accessibility audit. It does not run axe, crawl additional pages, submit forms, generate reports, create letters, or make legal conclusions.
 
+## Axe Homepage Audit
+
+The axe homepage audit runs axe on exactly one homepage URL for an existing `Scan`. It stores `Finding` rows for axe findings and an `axe_homepage` `ScanEvidence` record with technical metadata.
+
+Endpoint:
+
+```bash
+curl -X POST http://localhost:8000/scans/{scan_id}/axe-homepage
+```
+
+This stage is one-page only. It does not crawl, run multi-page journeys, generate reports, create PDFs, create letters, or make legal conclusions. Findings are technical signals for review, not legal conclusions.
+
 ## Validation
 
 GitHub Actions runs the same validation on pull requests and pushes to `main`. The CI workflow does not require Docker, external API keys, Google Places, or browser installation.
