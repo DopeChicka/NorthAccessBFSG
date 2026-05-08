@@ -3,7 +3,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.base import Base
-from app.models import CompanyQualification, DiscoveryRun, DiscoveryRunStatus, LeadCandidate  # noqa: F401
+from app.models import (  # noqa: F401
+    CompanyEnrichment,
+    CompanyQualification,
+    DiscoveryRun,
+    DiscoveryRunStatus,
+    LeadCandidate,
+)
+from app.services.company_enrichment_service import enrich_candidate_with_mock
 from app.services.company_qualification_service import (
     MicroenterpriseThresholds,
     create_candidate_precheck,
@@ -41,23 +48,37 @@ def _create_run(db_session: Session) -> DiscoveryRun:
     return discovery_run
 
 
-def test_precheck_candidate_with_missing_company_data_needs_company_data(
+def _create_candidate(
     db_session: Session,
-) -> None:
+    *,
+    source: str = "google_places",
+    domain: str | None = "https://seed.example",
+    category: str | None = "store",
+    profile: str | None = None,
+) -> LeadCandidate:
     discovery_run = _create_run(db_session)
+    raw_data = {"mock_company_profile": profile} if profile else {}
     candidate = LeadCandidate(
         discovery_run_id=discovery_run.id,
-        source="google_places",
+        source=source,
         source_reference="places/seed",
         company_name="Seed Candidate GmbH",
+        domain=domain,
         city="Lübeck",
         postal_code="23552",
-        category="store",
-        raw_data={},
+        category=category,
+        raw_data=raw_data,
     )
     db_session.add(candidate)
     db_session.commit()
     db_session.refresh(candidate)
+    return candidate
+
+
+def test_precheck_candidate_with_missing_company_data_needs_company_data(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(db_session, profile=None)
 
     qualification = create_candidate_precheck(db_session, candidate.id)
 
@@ -90,6 +111,62 @@ def test_mock_candidate_precheck_does_not_create_legal_conclusion(db_session: Se
     assert qualification.confidence_score == 0.1
     assert qualification.evidence["is_mock_or_test_data"] is True
     assert "legal" not in qualification.notes.casefold()
+
+
+def test_qualification_precheck_uses_microenterprise_enrichment_data(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(db_session, profile="microenterprise")
+    enrich_candidate_with_mock(db_session, candidate.id)
+
+    qualification = create_candidate_precheck(db_session, candidate.id)
+
+    assert qualification.is_microenterprise is True
+    assert qualification.status.value == "needs_human_review"
+    assert qualification.employee_count == 5
+    assert qualification.annual_revenue_eur == 500_000
+    assert qualification.evidence["company_enrichment_source"] == "mock_company_data"
+    assert qualification.evidence["requires_company_enrichment"] is False
+
+
+def test_non_microenterprise_enrichment_can_signal_possible_candidate(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(
+        db_session,
+        profile="non_microenterprise",
+        domain="https://seed.example",
+        category="store",
+    )
+    enrich_candidate_with_mock(db_session, candidate.id)
+
+    qualification = create_candidate_precheck(db_session, candidate.id)
+
+    assert qualification.is_microenterprise is False
+    assert qualification.status.value == "possible_bfsg_candidate"
+    assert qualification.employee_count == 25
+    assert qualification.website_signal is True
+    assert qualification.b2c_signal is True
+    assert "legal" not in qualification.notes.casefold()
+
+
+def test_non_microenterprise_without_category_or_website_needs_review(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(
+        db_session,
+        profile="non_microenterprise",
+        domain=None,
+        category=None,
+    )
+    enrich_candidate_with_mock(db_session, candidate.id)
+
+    qualification = create_candidate_precheck(db_session, candidate.id)
+
+    assert qualification.is_microenterprise is False
+    assert qualification.status.value == "needs_human_review"
+    assert qualification.website_signal is False
+    assert qualification.b2c_signal is False
 
 
 def test_microenterprise_helper_returns_true_when_all_available_values_are_below_thresholds() -> None:
