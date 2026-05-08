@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.config import Settings
 from app.db.base import Base
 from app.models import (  # noqa: F401
     CompanyEnrichment,
@@ -17,7 +18,15 @@ from app.models import (  # noqa: F401
     WebsiteProbe,
 )
 from app.services.company_qualification_service import LeadCandidateNotFoundError
-from app.services.website_probe_service import run_mock_website_probe
+from app.services.website_probe_service import (
+    run_live_website_probe,
+    run_mock_website_probe,
+)
+from app.website_probe.providers.http_provider import (
+    HttpFetchResult,
+    HttpWebsiteProbeProvider,
+    LiveWebsiteProbeDisabledError,
+)
 
 
 @pytest.fixture()
@@ -186,3 +195,145 @@ def test_website_probe_makes_no_external_network_calls(monkeypatch, db_session: 
     probe = run_mock_website_probe(db_session, candidate.id)
 
     assert probe.status.value == "reachable"
+
+
+def test_live_provider_fails_clearly_when_disabled(db_session: Session) -> None:
+    candidate = _create_candidate(db_session, domain="https://shop.example")
+    provider = HttpWebsiteProbeProvider(
+        settings_=Settings(website_probe_live_enabled=False)
+    )
+
+    with pytest.raises(LiveWebsiteProbeDisabledError, match="Live website probe is disabled"):
+        provider.probe(candidate)
+
+
+def test_live_probe_without_domain_persists_skipped_missing_domain(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(db_session, domain=None)
+    provider = HttpWebsiteProbeProvider(settings_=Settings(website_probe_live_enabled=True))
+
+    probe = run_live_website_probe(db_session, candidate.id, provider=provider)
+
+    assert probe.status.value == "skipped"
+    assert probe.url is None
+    assert probe.normalized_domain is None
+    assert probe.evidence["provider"] == "live_http_website_probe"
+    assert probe.evidence["reason"] == "missing_domain"
+    assert probe.evidence["missing_domain"] is True
+    assert probe.evidence["no_legal_conclusion"] is True
+
+
+def test_live_provider_extracts_http_signals_from_single_response(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(db_session, domain="signal.example")
+
+    def fake_fetcher(url: str, settings_: Settings) -> HttpFetchResult:
+        assert url == "https://signal.example"
+        assert settings_.website_probe_timeout_seconds == 3
+        return HttpFetchResult(
+            url=url,
+            status_code=200,
+            body=(
+                b"<html><a href='/impressum'>Impressum</a>"
+                b"<a href='/login'>Login</a>"
+                b"<a href='/shop'>Shop</a>"
+                b"<a href='/cart'>Cart</a>"
+                b"<a href='/checkout'>Checkout</a>"
+                b"<a href='/booking'>Booking</a></html>"
+            ),
+        )
+
+    provider = HttpWebsiteProbeProvider(
+        settings_=Settings(
+            website_probe_live_enabled=True,
+            website_probe_timeout_seconds=3,
+        ),
+        fetcher=fake_fetcher,
+    )
+
+    probe = run_live_website_probe(db_session, candidate.id, provider=provider)
+
+    assert probe.status.value == "reachable"
+    assert probe.url == "https://signal.example"
+    assert probe.normalized_domain == "signal.example"
+    assert probe.http_status == 200
+    assert probe.has_homepage_signal is True
+    assert probe.has_impressum_signal is True
+    assert probe.has_login_signal is True
+    assert probe.has_shop_signal is True
+    assert probe.has_booking_signal is True
+    assert probe.has_checkout_signal is True
+    assert probe.has_b2c_transaction_signal is True
+    assert probe.evidence["checked_url"] == "https://signal.example"
+    assert probe.evidence["http_status"] == 200
+    assert "impressum" in probe.evidence["matched_keywords"]["impressum"]
+    assert "checkout" in probe.evidence["matched_keywords"]["checkout"]
+
+
+def test_live_probe_can_use_raw_data_domain_value(db_session: Session) -> None:
+    candidate = _create_candidate(
+        db_session,
+        domain=None,
+        raw_data={"website": "raw-domain.example"},
+    )
+
+    def fake_fetcher(url: str, settings_: Settings) -> HttpFetchResult:
+        return HttpFetchResult(url=url, status_code=200, body=b"Home")
+
+    provider = HttpWebsiteProbeProvider(
+        settings_=Settings(website_probe_live_enabled=True),
+        fetcher=fake_fetcher,
+    )
+
+    probe = run_live_website_probe(db_session, candidate.id, provider=provider)
+
+    assert probe.status.value == "reachable"
+    assert probe.url == "https://raw-domain.example"
+    assert probe.normalized_domain == "raw-domain.example"
+
+
+def test_live_website_probe_makes_no_external_network_calls(
+    monkeypatch,
+    db_session: Session,
+) -> None:
+    def fail_network(*args, **kwargs):
+        raise AssertionError("network access is not allowed in live website probe tests")
+
+    def fake_fetcher(url: str, settings_: Settings) -> HttpFetchResult:
+        return HttpFetchResult(url=url, status_code=200, body=b"Shop checkout")
+
+    monkeypatch.setattr(socket, "create_connection", fail_network)
+    candidate = _create_candidate(db_session, domain="https://shop.example")
+    provider = HttpWebsiteProbeProvider(
+        settings_=Settings(website_probe_live_enabled=True),
+        fetcher=fake_fetcher,
+    )
+
+    probe = run_live_website_probe(db_session, candidate.id, provider=provider)
+
+    assert probe.status.value == "reachable"
+    assert probe.has_b2c_transaction_signal is True
+
+
+def test_live_probe_evidence_has_no_forbidden_legal_claims(
+    db_session: Session,
+) -> None:
+    candidate = _create_candidate(db_session, domain="https://shop.example")
+
+    def fake_fetcher(url: str, settings_: Settings) -> HttpFetchResult:
+        return HttpFetchResult(url=url, status_code=200, body=b"Shop checkout")
+
+    provider = HttpWebsiteProbeProvider(
+        settings_=Settings(website_probe_live_enabled=True),
+        fetcher=fake_fetcher,
+    )
+
+    probe = run_live_website_probe(db_session, candidate.id, provider=provider)
+    text = json.dumps(probe.evidence, sort_keys=True).casefold()
+
+    assert "legally obligated" not in text
+    assert "violation" not in text
+    assert "violates" not in text
+    assert probe.evidence["no_legal_conclusion"] is True

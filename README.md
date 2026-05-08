@@ -330,6 +330,27 @@ Example response:
 
 The mock website probe does not fetch websites or scrape pages. It derives deterministic test signals from the candidate domain, category, and raw data. A candidate without a domain is skipped with `missing_domain` evidence. Ecommerce-like candidates can produce shop, checkout, and B2C transaction signals; booking and transport candidates can produce booking/ticket-like signals; banking candidates can produce login-like signals.
 
+### Live HTTP Website Probe
+
+The live HTTP website probe is disabled by default. When explicitly enabled, it performs one lightweight HTTP GET for a candidate domain and stores reachability and page-level signal fields. It does not crawl multiple pages, submit forms, use Playwright, run an accessibility audit, generate a report, bypass robots or security protections, or make legal conclusions.
+
+Endpoint:
+
+```bash
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/website-probe/live
+```
+
+Configuration:
+
+```text
+WEBSITE_PROBE_LIVE_ENABLED=false
+WEBSITE_PROBE_TIMEOUT_SECONDS=10
+WEBSITE_PROBE_USER_AGENT=NorthAccessBFSGBot/0.1
+WEBSITE_PROBE_MAX_BODY_BYTES=200000
+```
+
+If disabled, the endpoint returns a clear service-unavailable error and does not make a network call. If enabled and the candidate has no domain or website-like raw data value, the probe stores a skipped `missing_domain` result. If enabled and a domain is present, the provider normalizes it to an HTTPS URL when no scheme is supplied, requests only that URL, caps the response body, and derives lightweight signals such as homepage, impressum, login, shop, booking, checkout/cart, and B2C transaction indicators.
+
 These signals only help decide whether a future full scan may be worth scheduling. They are not accessibility results, legal conclusions, or BFSG violation findings. A full scan/audit stage comes later.
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.

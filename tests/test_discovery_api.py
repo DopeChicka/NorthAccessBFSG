@@ -292,6 +292,21 @@ def test_website_probe_unknown_candidate_returns_clear_error(db_session: Session
     assert "Lead candidate not found: missing" in response.json()["detail"]
 
 
+def test_live_website_probe_endpoint_disabled_by_default_returns_clear_error(
+    db_session: Session,
+) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidate_id = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"][0]["id"]
+
+    response = client.post(f"/discovery/candidates/{candidate_id}/website-probe/live")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Live website probe is disabled"
+
+
 def test_promotion_unknown_candidate_returns_clear_error(db_session: Session) -> None:
     client = make_client(db_session)
 

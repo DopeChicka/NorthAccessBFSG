@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     google_places_enabled: bool = False
     google_places_timeout_seconds: int = 10
     google_places_max_results_per_query: int = 5
+    website_probe_live_enabled: bool = False
+    website_probe_timeout_seconds: int = 10
+    website_probe_user_agent: str = "NorthAccessBFSGBot/0.1"
+    website_probe_max_body_bytes: int = 200_000
     bfsg_microenterprise_employee_threshold: int = 10
     bfsg_microenterprise_revenue_threshold_eur: int = 2_000_000
     bfsg_microenterprise_balance_threshold_eur: int = 2_000_000

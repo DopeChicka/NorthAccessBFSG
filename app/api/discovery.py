@@ -42,8 +42,10 @@ from app.services.provider_execution_service import (
 )
 from app.services.website_probe_service import (
     get_latest_website_probe,
+    run_live_website_probe,
     run_mock_website_probe,
 )
+from app.website_probe.providers.http_provider import LiveWebsiteProbeDisabledError
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
 
@@ -357,6 +359,27 @@ def run_candidate_website_probe(
         probe = run_mock_website_probe(db, candidate_id)
     except LeadCandidateNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return {
+        "candidate_id": candidate_id,
+        "website_probe_id": probe.id,
+        "status": probe.status.value,
+        "confidence_score": probe.confidence_score,
+    }
+
+
+@router.post("/candidates/{candidate_id}/website-probe/live")
+def run_candidate_live_website_probe(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        probe = run_live_website_probe(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except LiveWebsiteProbeDisabledError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     return {
         "candidate_id": candidate_id,
         "website_probe_id": probe.id,
