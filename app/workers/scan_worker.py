@@ -27,6 +27,7 @@ def run_scan_task(scan_id: str) -> str:
         scan.completed_at = None
         scan.failed_at = None
         scan.error_message = None
+        scan.evidence_metadata = {}
         db.commit()
 
         logger.info("Started Playwright accessibility scan %s for %s", scan_id, domain)
@@ -38,6 +39,7 @@ def run_scan_task(scan_id: str) -> str:
             return scan_id
 
         scan.status = ScanStatus.processing
+        scan.evidence_metadata = scan_result.evidence_metadata
         db.commit()
 
         _persist_findings(db, scan_id=scan_id, scan_result=scan_result)
