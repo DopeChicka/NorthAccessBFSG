@@ -4,6 +4,7 @@ from app.models.company_qualification import (
     CompanyQualificationStatus,
 )
 from app.models.compliance_finding import ComplianceFinding
+from app.models.compliance_mapping import ComplianceMapping
 from app.models.discovery_run import DiscoveryRun, DiscoveryRunStatus
 from app.models.evidence_bundle import EvidenceBundle
 from app.models.finding import Finding
@@ -28,6 +29,7 @@ __all__ = [
     "CompanyQualification",
     "CompanyQualificationStatus",
     "ComplianceFinding",
+    "ComplianceMapping",
     "DiscoveryRun",
     "DiscoveryRunStatus",
     "EvidenceBundle",

@@ -37,3 +37,6 @@ class Finding(Base):
     )
 
     scan: Mapped["Scan"] = relationship("Scan", back_populates="findings")
+    compliance_mappings: Mapped[list["ComplianceMapping"]] = relationship(
+        "ComplianceMapping", back_populates="finding", cascade="all, delete-orphan"
+    )

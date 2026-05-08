@@ -13,12 +13,14 @@ app/
   api/
     __init__.py
     compliance.py
+    compliance_mapping.py
     discovery.py
     evidence.py
     health.py
     scans.py
   compliance/
     __init__.py
+    mapping.py
     rule_engine.py
     rules/
       __init__.py
@@ -408,6 +410,22 @@ curl -X POST http://localhost:8000/scans/{scan_id}/axe-homepage
 
 This stage is one-page only. It does not crawl, run multi-page journeys, generate reports, create PDFs, create letters, or make legal conclusions. Findings are technical signals for review, not legal conclusions.
 
+## Finding Compliance Mapping
+
+Compliance mapping connects stored axe `Finding` rows to deterministic WCAG, EN 301 549, and BFSG signal references. The mapping stores technical references in `compliance_mappings` and keeps the original `findings` rows unchanged.
+
+Endpoints:
+
+```bash
+curl -X POST http://localhost:8000/findings/{finding_id}/compliance/map
+curl http://localhost:8000/findings/{finding_id}/compliance
+curl -X POST http://localhost:8000/scans/{scan_id}/compliance/map
+```
+
+Known axe rule IDs map to predefined reference lists. Unknown axe rule IDs map to empty reference lists with `review_required=true` and low confidence.
+
+These mappings are technical references and review signals only. They are not legal advice, certification, reports, PDFs, letters, or final applicability decisions.
+
 ## Validation
 
 GitHub Actions runs the same validation on pull requests and pushes to `main`. The CI workflow does not require Docker, external API keys, Google Places, or browser installation.
@@ -490,6 +508,16 @@ curl -X POST http://localhost:8000/compliance/run/{scan_id}
 ```
 
 Compliance results are stored separately in `compliance_findings`. Raw `findings` rows are never overwritten. Re-running the endpoint updates the same `finding_id` + `mapping_version` compliance rows and removes stale rows for that scan/version.
+
+For finding-level reference mapping, use:
+
+```bash
+curl -X POST http://localhost:8000/findings/{finding_id}/compliance/map
+curl http://localhost:8000/findings/{finding_id}/compliance
+curl -X POST http://localhost:8000/scans/{scan_id}/compliance/map
+```
+
+Finding-level mappings are stored in `compliance_mappings` as technical WCAG, EN 301 549, and BFSG signal references only. They are not legal advice, certification, reports, PDFs, letters, or final applicability decisions.
 
 ## Browser Configuration
 
