@@ -2,7 +2,7 @@
 
 NorthAccessBFSG is a FastAPI backend foundation for a BFSG/WCAG compliance audit platform.
 
-The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, company enrichment, company precheck, and internal promotion routing workflows.
+The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, company enrichment, company precheck, internal promotion routing, and lightweight website probe workflows.
 
 ## Project Structure
 
@@ -60,12 +60,20 @@ app/
     discovery_run.py
     lead_candidate.py
     promotion_decision.py
+    website_probe.py
   services/
     company_enrichment_service.py
     company_qualification_service.py
     discovery_service.py
     promotion_service.py
     provider_execution_service.py
+    website_probe_service.py
+  website_probe/
+    __init__.py
+    providers/
+      __init__.py
+      base.py
+      mock_provider.py
   workers/
 data/
   orte_deutschland.csv
@@ -296,7 +304,33 @@ Example response:
 }
 ```
 
-The Promotion Gate is only internal routing. `ready_for_website_probe` means the candidate can move to a future Website Probe stage. It does not mean a BFSG obligation, an accessibility issue, or any violation has been established. The Website Probe stage is not implemented in this step.
+The Promotion Gate is only internal routing. `ready_for_website_probe` means the candidate can move to a Website Probe stage. It does not mean a BFSG obligation, an accessibility issue, or any violation has been established.
+
+## Website Probe Foundation
+
+`WebsiteProbe` stores lightweight website and web-flow signals for a promoted `LeadCandidate`. It is not a full accessibility audit, not Playwright scanning, not legal scoring, and not report generation.
+
+Mock Website Probe endpoints:
+
+```bash
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/website-probe/mock
+curl http://localhost:8000/discovery/candidates/{candidate_id}/website-probe
+```
+
+Example response:
+
+```json
+{
+  "candidate_id": "<candidate-id>",
+  "website_probe_id": "<probe-id>",
+  "status": "skipped",
+  "confidence_score": 0.2
+}
+```
+
+The mock website probe does not fetch websites or scrape pages. It derives deterministic test signals from the candidate domain, category, and raw data. A candidate without a domain is skipped with `missing_domain` evidence. Ecommerce-like candidates can produce shop, checkout, and B2C transaction signals; booking and transport candidates can produce booking/ticket-like signals; banking candidates can produce login-like signals.
+
+These signals only help decide whether a future full scan may be worth scheduling. They are not accessibility results, legal conclusions, or BFSG violation findings. A full scan/audit stage comes later.
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
 
