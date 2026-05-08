@@ -55,3 +55,8 @@ class LeadCandidate(Base):
         back_populates="lead_candidate",
         cascade="all, delete-orphan",
     )
+    website_probes: Mapped[list["WebsiteProbe"]] = relationship(
+        "WebsiteProbe",
+        back_populates="lead_candidate",
+        cascade="all, delete-orphan",
+    )
