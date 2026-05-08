@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
-from importlib import import_module
+import subprocess
+import sys
+from pathlib import Path
+
+FILTER_STEP = Path("04_filter_quality.py")
 
 
 def main() -> int:
-    filter_quality = import_module("04_filter_quality")
-    return int(filter_quality.main())
+    completed = subprocess.run(
+        [sys.executable, str(FILTER_STEP)],
+        check=False,
+        cwd=Path("."),
+    )
+    return int(completed.returncode)
 
 
 if __name__ == "__main__":
