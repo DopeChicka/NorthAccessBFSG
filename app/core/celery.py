@@ -17,3 +17,5 @@ celery_app.conf.update(
     task_track_started=True,
     timezone="UTC",
 )
+
+app = celery_app
