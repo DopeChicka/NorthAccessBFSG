@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,6 +13,7 @@ from app.db.base import Base
 class ScanStatus(str, enum.Enum):
     pending = "pending"
     running = "running"
+    processing = "processing"
     done = "done"
     failed = "failed"
 
@@ -41,6 +42,7 @@ class Scan(Base):
     failed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     lead: Mapped["Lead"] = relationship("Lead", back_populates="scans")
     findings: Mapped[list["Finding"]] = relationship(
