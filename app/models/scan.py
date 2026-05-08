@@ -3,8 +3,9 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -43,6 +44,9 @@ class Scan(Base):
         DateTime(timezone=True), nullable=True
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidence_metadata: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
 
     lead: Mapped["Lead"] = relationship("Lead", back_populates="scans")
     findings: Mapped[list["Finding"]] = relationship(
