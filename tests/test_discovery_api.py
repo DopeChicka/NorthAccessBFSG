@@ -115,6 +115,37 @@ def test_discovery_run_candidates_endpoint_returns_empty_list(db_session: Sessio
     assert response.json() == {"discovery_run_id": run_id, "candidates": []}
 
 
+def test_mock_provider_endpoint_persists_candidates(db_session: Session) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+
+    provider_response = client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidates_response = client.get(f"/discovery/runs/{run_id}/candidates")
+
+    assert provider_response.status_code == 200
+    assert provider_response.json() == {
+        "discovery_run_id": run_id,
+        "provider": "mock",
+        "candidates_created": 10,
+        "candidates_total": 10,
+    }
+    candidates = candidates_response.json()["candidates"]
+    assert len(candidates) == 10
+    assert candidates[0]["source"] == "mock"
+    assert candidates[0]["company_name"].startswith("Mock Candidate Lübeck")
+    assert candidates[0]["raw_data"]["mock"] is True
+
+
+def test_mock_provider_endpoint_unknown_run_returns_clear_error(db_session: Session) -> None:
+    client = make_client(db_session)
+
+    response = client.post("/discovery/runs/missing/providers/mock")
+
+    assert response.status_code == 404
+    assert "Discovery run not found: missing" in response.json()["detail"]
+
+
 def test_create_discovery_run_unknown_city_returns_clear_error(db_session: Session) -> None:
     client = make_client(db_session)
 
