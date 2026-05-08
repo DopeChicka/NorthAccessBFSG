@@ -1,6 +1,8 @@
 # NorthAccessBFSG
 
-Minimal FastAPI backend foundation for a BFSG/WCAG compliance audit platform.
+NorthAccessBFSG is a FastAPI backend foundation for a BFSG/WCAG compliance audit platform.
+
+The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city and keyword resolution.
 
 ## Project Structure
 
@@ -11,6 +13,8 @@ app/
   api/
     __init__.py
     compliance.py
+    discovery.py
+    evidence.py
     health.py
     scans.py
   compliance/
@@ -29,20 +33,25 @@ app/
     base.py
     init_db.py
     session.py
+  discovery/
+    __init__.py
+    keywords.py
+    place_resolver.py
+  evidence/
+    __init__.py
+    hashing.py
+    storage.py
+    storage_backend.py
   models/
-    __init__.py
-    compliance_finding.py
-    finding.py
-    lead.py
-    scan.py
   services/
-    __init__.py
-    compliance_service.py
-    scan_service.py
   workers/
-    __init__.py
-    playwright_engine.py
-    scan_worker.py
+data/
+  orte_deutschland.csv
+04_filter_quality.py
+05_run_pipeline.py
+13_city_guard.py
+14_evidence_gate.py
+15_run_pipeline_guarded.py
 Dockerfile
 docker-compose.yml
 requirements.txt
@@ -57,8 +66,8 @@ docker-compose up --build
 
 Then open:
 
-```text
-http://localhost:8000/health
+```bash
+curl http://localhost:8000/health
 ```
 
 Expected response:
@@ -67,7 +76,72 @@ Expected response:
 {"status":"ok"}
 ```
 
-The API waits for PostgreSQL and Redis to become healthy, connects with SQLAlchemy, and auto-creates the `leads`, `scans`, `findings`, and `compliance_findings` tables on startup.
+The API waits for PostgreSQL and Redis to become healthy, connects with SQLAlchemy, and auto-creates the database tables on startup.
+
+## Lead Discovery Foundation
+
+The canonical raw city data file is:
+
+```text
+data/orte_deutschland.csv
+```
+
+The file is semicolon-separated and must contain these columns:
+
+```text
+plz;stadt
+```
+
+The resolver treats this file as raw input. The `stadt` column may contain real city names as well as organizations or special postal recipients, so city resolution uses exact normalized city-name matching only. It does not use substring matching.
+
+Supported normalization includes case-insensitive matching and German umlaut handling:
+
+```text
+Lübeck -> Luebeck -> lubeck
+```
+
+Discovery endpoints:
+
+```bash
+curl http://localhost:8000/discovery/places/Lübeck
+curl http://localhost:8000/discovery/places/Luebeck
+curl http://localhost:8000/discovery/places/lubeck
+curl http://localhost:8000/discovery/keywords
+```
+
+Example place response:
+
+```json
+{
+  "city": "Lübeck",
+  "matches": [
+    {
+      "postal_code": "23552",
+      "city": "Lübeck",
+      "country": "DE"
+    }
+  ]
+}
+```
+
+This is only the resolver and keyword foundation for later lead discovery. It is not a live Google Maps API integration. It does not scrape websites and does not call external discovery providers.
+
+## Guarded Pipeline
+
+The numbered guarded pipeline files validate that runtime dependencies are present and that the canonical city CSV is usable:
+
+```bash
+python -m py_compile \
+  04_filter_quality.py \
+  05_run_pipeline.py \
+  13_city_guard.py \
+  14_evidence_gate.py \
+  15_run_pipeline_guarded.py
+
+python 15_run_pipeline_guarded.py
+```
+
+The guarded runner fails if `data/orte_deutschland.csv` is missing, unreadable, missing required columns, header-only, or contains zero usable rows.
 
 ## Async Scan Flow
 
@@ -99,18 +173,6 @@ pending -> running -> processing -> done
 
 If task execution fails, the worker marks the scan as `failed` and stores `error_message`.
 
-Inspect scan status and evidence metadata:
-
-```bash
-docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT id, status, error_message, evidence_metadata->>'current_url' AS current_url FROM scans;"
-```
-
-Inspect stored findings:
-
-```bash
-docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT rule_id, severity, wcag_refs, confidence_score FROM findings;"
-```
-
 ## Compliance Mapping Flow
 
 Run deterministic compliance mapping for a completed scan:
@@ -119,33 +181,7 @@ Run deterministic compliance mapping for a completed scan:
 curl -X POST http://localhost:8000/compliance/run/{scan_id}
 ```
 
-Expected response:
-
-```json
-{
-  "scan_id": "<scan-id>",
-  "mapping_version": "2026.05.08-001:<rules-hash>",
-  "total_findings": 3,
-  "mapped_findings": 3,
-  "critical_count": 0,
-  "high_count": 2,
-  "compliance_coverage_score": 1.0
-}
-```
-
 Compliance results are stored separately in `compliance_findings`. Raw `findings` rows are never overwritten. Re-running the endpoint updates the same `finding_id` + `mapping_version` compliance rows and removes stale rows for that scan/version.
-
-Inspect enriched compliance findings:
-
-```bash
-docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT rule_id, normalized_severity, wcag_refs, en_refs, bfsg_refs, compliance_confidence_score FROM compliance_findings;"
-```
-
-The worker process can also be started independently:
-
-```bash
-celery -A app.core.celery worker --loglevel=info
-```
 
 ## Browser Configuration
 

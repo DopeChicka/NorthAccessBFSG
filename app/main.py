@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.compliance import router as compliance_router
+from app.api.discovery import router as discovery_router
 from app.api.evidence import router as evidence_router
 from app.api.health import router as health_router
 from app.api.scans import router as scans_router
@@ -27,3 +28,4 @@ app.include_router(health_router)
 app.include_router(scans_router)
 app.include_router(compliance_router)
 app.include_router(evidence_router)
+app.include_router(discovery_router)

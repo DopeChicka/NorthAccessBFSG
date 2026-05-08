@@ -1,7 +1,8 @@
 """Guarded pipeline runner.
 
 The runner fails before execution if any runtime file it depends on is absent.
-It references only files that are part of this repository.
+It references only files that are part of this repository and validates the
+canonical raw city data before running the pipeline step.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ REQUIRED_RUNTIME_FILES = (
     "05_run_pipeline.py",
     "13_city_guard.py",
     "14_evidence_gate.py",
-    "orte_deutschland.csv",
+    "data/orte_deutschland.csv",
 )
 
 GUARD_SCRIPTS = (
