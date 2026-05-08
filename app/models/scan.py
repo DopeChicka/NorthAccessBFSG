@@ -32,7 +32,7 @@ class Scan(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    lead: Mapped[Lead] = relationship(back_populates="scans")
-    findings: Mapped[list[Finding]] = relationship(
-        back_populates="scan", cascade="all, delete-orphan"
+    lead: Mapped["Lead"] = relationship("Lead", back_populates="scans")
+    findings: Mapped[list["Finding"]] = relationship(
+        "Finding", back_populates="scan", cascade="all, delete-orphan"
     )
