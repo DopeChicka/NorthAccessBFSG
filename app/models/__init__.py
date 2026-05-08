@@ -15,6 +15,12 @@ from app.models.promotion_decision import (
     PromotionDecisionStatus,
     PromotionReasonCode,
 )
+from app.models.review_item import (
+    ReviewItem,
+    ReviewItemStatus,
+    ReviewPriority,
+    ReviewSubjectType,
+)
 from app.models.scan import Scan, ScanStatus
 from app.models.scan_evidence import ScanEvidence
 from app.models.scan_readiness_decision import (
@@ -39,6 +45,10 @@ __all__ = [
     "PromotionDecision",
     "PromotionDecisionStatus",
     "PromotionReasonCode",
+    "ReviewItem",
+    "ReviewItemStatus",
+    "ReviewPriority",
+    "ReviewSubjectType",
     "Scan",
     "ScanEvidence",
     "ScanReadinessDecision",

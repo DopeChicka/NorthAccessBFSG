@@ -8,6 +8,7 @@ from app.api.compliance_mapping import router as compliance_mapping_router
 from app.api.discovery import router as discovery_router
 from app.api.evidence import router as evidence_router
 from app.api.health import router as health_router
+from app.api.review import router as review_router
 from app.api.scans import router as scans_router
 from app.core.config import settings
 from app.db.init_db import init_db
@@ -31,3 +32,4 @@ app.include_router(compliance_router)
 app.include_router(compliance_mapping_router)
 app.include_router(evidence_router)
 app.include_router(discovery_router)
+app.include_router(review_router)

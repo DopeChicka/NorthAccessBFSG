@@ -6,6 +6,7 @@ from app.models.lead_candidate import LeadCandidate
 from app.models.promotion_decision import PromotionDecision, PromotionDecisionStatus
 from app.models.website_probe import WebsiteProbe, WebsiteProbeStatus
 from app.services.company_qualification_service import LeadCandidateNotFoundError
+from app.services.review_service import auto_create_review_item_for_website_probe
 from app.website_probe.providers.base import WebsiteProbeProvider, WebsiteProbeResult
 from app.website_probe.providers.http_provider import HttpWebsiteProbeProvider
 from app.website_probe.providers.mock_provider import MockWebsiteProbeProvider
@@ -54,10 +55,13 @@ def run_mock_website_probe(db: Session, candidate_id: str) -> WebsiteProbe:
 
     existing = _find_existing_probe(db, candidate_id, promotion, result)
     if existing:
+        auto_create_review_item_for_website_probe(db, existing, commit=True)
         return existing
 
     probe = _probe_from_result(candidate_id, promotion, result)
     db.add(probe)
+    db.flush()
+    auto_create_review_item_for_website_probe(db, probe)
     db.commit()
     db.refresh(probe)
     return probe
@@ -97,6 +101,8 @@ def run_live_website_probe(
 
     probe = _probe_from_result(candidate_id, promotion, result)
     db.add(probe)
+    db.flush()
+    auto_create_review_item_for_website_probe(db, probe)
     db.commit()
     db.refresh(probe)
     return probe

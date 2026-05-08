@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.compliance.mapping import map_axe_rule
 from app.models import ComplianceMapping, Finding, Scan
+from app.services.review_service import auto_create_review_item_for_compliance_mapping
 
 
 class FindingNotFoundError(Exception):
@@ -25,6 +26,8 @@ def map_finding_compliance(db: Session, finding_id: str) -> ComplianceMapping:
 
     mapping = _build_compliance_mapping(finding)
     db.add(mapping)
+    db.flush()
+    auto_create_review_item_for_compliance_mapping(db, mapping)
     db.commit()
     db.refresh(mapping)
     return mapping
@@ -61,6 +64,9 @@ def map_scan_findings_compliance(db: Session, scan_id: str) -> list[ComplianceMa
     )
     mappings = [_build_compliance_mapping(finding) for finding in findings]
     db.add_all(mappings)
+    db.flush()
+    for mapping in mappings:
+        auto_create_review_item_for_compliance_mapping(db, mapping)
     db.commit()
     for mapping in mappings:
         db.refresh(mapping)
