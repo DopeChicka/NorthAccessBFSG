@@ -1,33 +1,30 @@
 """Minimal quality filter entrypoint for the guarded pipeline.
 
-The real data source is expected in ``orte_deutschland.csv``. This step only
-checks that the file is readable and reports how many rows are available.
+The real data source is expected at ``data/orte_deutschland.csv``. This step
+checks that the raw semicolon-separated CSV is readable and contains usable
+rows. It does not perform substring-based city matching.
 """
 
 from __future__ import annotations
 
-import csv
-from pathlib import Path
-
-INPUT_FILE = Path("orte_deutschland.csv")
+from app.discovery.place_resolver import DEFAULT_CITY_DATA_PATH, PlaceDataError, load_places
 
 
-def inspect_input(path: Path = INPUT_FILE) -> dict[str, int | str]:
-    if not path.is_file():
-        raise FileNotFoundError(f"Missing input file: {path}")
+INPUT_FILE = DEFAULT_CITY_DATA_PATH
 
-    with path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        if not reader.fieldnames:
-            raise ValueError(f"Input file has no CSV header: {path}")
-        row_count = sum(1 for _ in reader)
 
-    return {"input": str(path), "rows": row_count}
+def inspect_input() -> dict[str, int | str]:
+    try:
+        places = load_places(INPUT_FILE)
+    except PlaceDataError:
+        raise
+
+    return {"input": str(INPUT_FILE), "usable_rows": len(places)}
 
 
 def main() -> int:
     result = inspect_input()
-    print(f"FILTER_QUALITY_OK input={result['input']} rows={result['rows']}")
+    print(f"FILTER_QUALITY_OK input={result['input']} usable_rows={result['usable_rows']}")
     return 0
 
 
