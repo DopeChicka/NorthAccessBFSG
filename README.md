@@ -14,6 +14,7 @@ app/
     scans.py
   core/
     __init__.py
+    browser_config.py
     celery.py
     config.py
   db/
@@ -31,6 +32,7 @@ app/
     scan_service.py
   workers/
     __init__.py
+    playwright_engine.py
     scan_worker.py
 Dockerfile
 docker-compose.yml
@@ -60,10 +62,16 @@ The API waits for PostgreSQL and Redis to become healthy, connects with SQLAlche
 
 ## Async Scan Flow
 
-Run a scan for an existing lead:
+Create a lead directly in the database while a public lead API does not exist yet:
 
 ```bash
-curl -X POST http://localhost:8000/scans/run/{lead_id}
+docker-compose exec db psql -U northaccess -d northaccessbfsg -c "INSERT INTO leads (id, domain, company_name) VALUES ('11111111-1111-1111-1111-111111111111', 'https://example.com', 'Example') ON CONFLICT (id) DO NOTHING;"
+```
+
+Run a scan for the lead:
+
+```bash
+curl -X POST http://localhost:8000/scans/run/11111111-1111-1111-1111-111111111111
 ```
 
 Expected immediate response:
@@ -72,16 +80,41 @@ Expected immediate response:
 {"scan_id":"<scan-id>"}
 ```
 
-The API creates a `pending` scan and queues a Celery task without blocking. The worker then updates the scan lifecycle:
+The API creates a `pending` scan and queues a Celery task without blocking. The worker launches Playwright headless Chromium, loads the lead domain, runs axe-core, captures evidence metadata, and persists raw findings.
+
+Lifecycle:
 
 ```text
-pending -> running -> done
+pending -> running -> processing -> done
 ```
 
-If task execution fails, the worker marks the scan as `failed`.
+If task execution fails, the worker marks the scan as `failed` and stores `error_message`.
+
+Inspect stored findings:
+
+```bash
+docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT rule_id, severity, wcag_refs, confidence_score FROM findings;"
+```
 
 The worker process can also be started independently:
 
 ```bash
 celery -A app.core.celery worker --loglevel=info
 ```
+
+## Browser Configuration
+
+The worker defaults to Chromium and also installs Firefox:
+
+```text
+BROWSER_NAME=chromium
+BROWSER_HEADLESS=true
+BROWSER_NAVIGATION_TIMEOUT_MS=30000
+BROWSER_ACTION_TIMEOUT_MS=10000
+BROWSER_VIEWPORT_WIDTH=1440
+BROWSER_VIEWPORT_HEIGHT=900
+BROWSER_RETRIES=1
+BROWSER_WAIT_UNTIL=networkidle
+```
+
+WebKit is supported by configuration but is not installed in the default image.
