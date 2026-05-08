@@ -334,9 +334,11 @@ These signals only help decide whether a future full scan may be worth schedulin
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
 
-## Guarded Pipeline
+## Validation
 
-The numbered guarded pipeline files validate that runtime dependencies are present and that the canonical city CSV is usable:
+GitHub Actions runs the same validation on pull requests and pushes to `main`. The CI workflow does not require Docker, external API keys, Google Places, or browser installation.
+
+Local Linux/macOS:
 
 ```bash
 python -m py_compile \
@@ -347,8 +349,32 @@ python -m py_compile \
   15_run_pipeline_guarded.py
 
 python 15_run_pipeline_guarded.py
+python -m pytest -q
 ```
 
+Windows PowerShell:
+
+```powershell
+python -m py_compile `
+  04_filter_quality.py `
+  05_run_pipeline.py `
+  13_city_guard.py `
+  14_evidence_gate.py `
+  15_run_pipeline_guarded.py
+
+python 15_run_pipeline_guarded.py
+python -m pytest -q
+```
+
+Make targets are available on systems with `make`:
+
+```bash
+make validate
+make test
+make pipeline
+```
+
+The numbered guarded pipeline files validate that runtime dependencies are present and that the canonical city CSV is usable.
 The guarded runner fails if `data/orte_deutschland.csv` is missing, unreadable, missing required columns, header-only, or contains zero usable rows.
 
 ## Async Scan Flow
