@@ -32,9 +32,15 @@ class Scan(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    failed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     lead: Mapped["Lead"] = relationship("Lead", back_populates="scans")
     findings: Mapped[list["Finding"]] = relationship(
