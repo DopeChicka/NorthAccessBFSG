@@ -11,9 +11,14 @@ from app.discovery.providers.google_places_provider import (
     GooglePlacesConfigurationError,
     GooglePlacesDisabledError,
 )
+from app.models.company_enrichment import CompanyEnrichment
 from app.models.company_qualification import CompanyQualification
 from app.models.discovery_run import DiscoveryRun
 from app.models.lead_candidate import LeadCandidate
+from app.services.company_enrichment_service import (
+    enrich_candidate_with_mock,
+    get_latest_enrichment,
+)
 from app.services.company_qualification_service import (
     LeadCandidateNotFoundError,
     create_candidate_precheck,
@@ -68,6 +73,26 @@ def _serialize_candidate(candidate: LeadCandidate) -> dict[str, Any]:
         "raw_data": candidate.raw_data,
         "confidence_score": candidate.confidence_score,
         "created_at": _format_datetime(candidate.created_at),
+    }
+
+
+def _serialize_enrichment(enrichment: CompanyEnrichment) -> dict[str, Any]:
+    return {
+        "id": enrichment.id,
+        "candidate_id": enrichment.lead_candidate_id,
+        "source": enrichment.source,
+        "source_reference": enrichment.source_reference,
+        "company_name": enrichment.company_name,
+        "legal_form": enrichment.legal_form,
+        "registry_id": enrichment.registry_id,
+        "source_url": enrichment.source_url,
+        "employee_count": enrichment.employee_count,
+        "annual_revenue_eur": enrichment.annual_revenue_eur,
+        "balance_sheet_total_eur": enrichment.balance_sheet_total_eur,
+        "raw_data": enrichment.raw_data,
+        "confidence_score": enrichment.confidence_score,
+        "created_at": _format_datetime(enrichment.created_at),
+        "updated_at": _format_datetime(enrichment.updated_at),
     }
 
 
@@ -181,6 +206,33 @@ def read_run_candidates(run_id: str, db: Session = Depends(get_db)) -> dict[str,
         "discovery_run_id": run_id,
         "candidates": [_serialize_candidate(candidate) for candidate in candidates],
     }
+
+
+@router.post("/candidates/{candidate_id}/enrichment/mock")
+def run_mock_company_enrichment(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, str | float | None]:
+    try:
+        summary = enrich_candidate_with_mock(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return summary.to_dict()
+
+
+@router.get("/candidates/{candidate_id}/enrichment")
+def read_candidate_enrichment(
+    candidate_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        enrichment = get_latest_enrichment(db, candidate_id)
+    except LeadCandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if enrichment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Company enrichment not found for candidate: {candidate_id}",
+        )
+    return _serialize_enrichment(enrichment)
 
 
 @router.post("/candidates/{candidate_id}/qualification/precheck")
