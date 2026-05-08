@@ -6,8 +6,12 @@ services:
       ENVIRONMENT: development
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      EVIDENCE_STORAGE_BACKEND: local
+      EVIDENCE_LOCAL_ROOT: /app/evidence-data
     ports:
       - "8000:8000"
+    volumes:
+      - evidence_data:/app/evidence-data
     depends_on:
       db:
         condition: service_healthy
@@ -31,6 +35,10 @@ services:
       BROWSER_VIEWPORT_HEIGHT: 900
       BROWSER_RETRIES: 1
       BROWSER_WAIT_UNTIL: networkidle
+      EVIDENCE_STORAGE_BACKEND: local
+      EVIDENCE_LOCAL_ROOT: /app/evidence-data
+    volumes:
+      - evidence_data:/app/evidence-data
     depends_on:
       db:
         condition: service_healthy
@@ -65,3 +73,4 @@ services:
 
 volumes:
   postgres_data:
+  evidence_data:
