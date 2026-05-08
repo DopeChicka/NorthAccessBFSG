@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.evidence.hashing import chain_hash, evidence_fingerprint
-from app.evidence.storage import EvidenceArtifact, get_evidence_storage
+from app.evidence.storage import EvidenceArtifact, StoredEvidenceArtifact, get_evidence_storage
 from app.models import EvidenceBundle
 
 
@@ -55,16 +55,21 @@ def persist_scan_evidence(
     ]
 
 
-def persist_finding_evidence(
+def persist_finding_evidence_refs(
     db: Session,
     *,
     scan_id: str,
     finding_id: str,
-    artifacts: list[EvidenceArtifact],
+    source_bundles: list[EvidenceBundle],
 ) -> list[EvidenceBundle]:
     bundles = [
-        _store_bundle(db, scan_id=scan_id, finding_id=finding_id, artifact=artifact)
-        for artifact in artifacts
+        _create_reference_bundle(
+            db,
+            scan_id=scan_id,
+            finding_id=finding_id,
+            source_bundle=source_bundle,
+        )
+        for source_bundle in source_bundles
     ]
     fingerprint = evidence_fingerprint(
         finding_id=finding_id, artifact_hashes=[bundle.hash for bundle in bundles]
@@ -107,11 +112,49 @@ def _store_bundle(
         finding_id=finding_id,
         artifact=artifact,
     )
+    return _create_bundle_from_stored_artifact(
+        db,
+        scan_id=scan_id,
+        finding_id=finding_id,
+        stored_artifact=stored_artifact,
+    )
+
+
+def _create_reference_bundle(
+    db: Session,
+    *,
+    scan_id: str,
+    finding_id: str,
+    source_bundle: EvidenceBundle,
+) -> EvidenceBundle:
+    stored_artifact = StoredEvidenceArtifact(
+        type=source_bundle.type,
+        storage_backend=source_bundle.storage_backend,
+        storage_path=source_bundle.storage_path,
+        hash=source_bundle.hash,
+        size_bytes=source_bundle.size_bytes,
+        content_type=source_bundle.content_type,
+    )
+    return _create_bundle_from_stored_artifact(
+        db,
+        scan_id=scan_id,
+        finding_id=finding_id,
+        stored_artifact=stored_artifact,
+    )
+
+
+def _create_bundle_from_stored_artifact(
+    db: Session,
+    *,
+    scan_id: str,
+    finding_id: str | None,
+    stored_artifact: StoredEvidenceArtifact,
+) -> EvidenceBundle:
     version = _next_version(
         db,
         scan_id=scan_id,
         finding_id=finding_id,
-        evidence_type=artifact.type,
+        evidence_type=stored_artifact.type,
     )
     previous_chain_hash = _latest_chain_hash(db, scan_id=scan_id)
     bundle_chain_hash = chain_hash(
@@ -119,14 +162,14 @@ def _store_bundle(
         artifact_hash=stored_artifact.hash,
         scan_id=scan_id,
         finding_id=finding_id,
-        evidence_type=artifact.type,
+        evidence_type=stored_artifact.type,
         storage_path=stored_artifact.storage_path,
         version=version,
     )
     bundle = EvidenceBundle(
         scan_id=scan_id,
         finding_id=finding_id,
-        type=artifact.type,
+        type=stored_artifact.type,
         storage_backend=stored_artifact.storage_backend,
         storage_path=stored_artifact.storage_path,
         content_type=stored_artifact.content_type,
