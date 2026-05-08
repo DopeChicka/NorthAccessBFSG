@@ -10,8 +10,15 @@ app/
   main.py
   api/
     __init__.py
+    compliance.py
     health.py
     scans.py
+  compliance/
+    __init__.py
+    rule_engine.py
+    rules/
+      __init__.py
+      wcag_en_bfsg_map.json
   core/
     __init__.py
     browser_config.py
@@ -24,11 +31,13 @@ app/
     session.py
   models/
     __init__.py
+    compliance_finding.py
     finding.py
     lead.py
     scan.py
   services/
     __init__.py
+    compliance_service.py
     scan_service.py
   workers/
     __init__.py
@@ -58,7 +67,7 @@ Expected response:
 {"status":"ok"}
 ```
 
-The API waits for PostgreSQL and Redis to become healthy, connects with SQLAlchemy, and auto-creates the `leads`, `scans`, and `findings` tables on startup.
+The API waits for PostgreSQL and Redis to become healthy, connects with SQLAlchemy, and auto-creates the `leads`, `scans`, `findings`, and `compliance_findings` tables on startup.
 
 ## Async Scan Flow
 
@@ -100,6 +109,36 @@ Inspect stored findings:
 
 ```bash
 docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT rule_id, severity, wcag_refs, confidence_score FROM findings;"
+```
+
+## Compliance Mapping Flow
+
+Run deterministic compliance mapping for a completed scan:
+
+```bash
+curl -X POST http://localhost:8000/compliance/run/{scan_id}
+```
+
+Expected response:
+
+```json
+{
+  "scan_id": "<scan-id>",
+  "mapping_version": "2026.05.08-001:<rules-hash>",
+  "total_findings": 3,
+  "mapped_findings": 3,
+  "critical_count": 0,
+  "high_count": 2,
+  "compliance_coverage_score": 1.0
+}
+```
+
+Compliance results are stored separately in `compliance_findings`. Raw `findings` rows are never overwritten. Re-running the endpoint updates the same `finding_id` + `mapping_version` compliance rows and removes stale rows for that scan/version.
+
+Inspect enriched compliance findings:
+
+```bash
+docker-compose exec db psql -U northaccess -d northaccessbfsg -c "SELECT rule_id, normalized_severity, wcag_refs, en_refs, bfsg_refs, compliance_confidence_score FROM compliance_findings;"
 ```
 
 The worker process can also be started independently:
