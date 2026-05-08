@@ -44,7 +44,7 @@ def test_google_places_provider_fails_when_disabled() -> None:
 
 
 def test_google_places_provider_fails_when_api_key_missing() -> None:
-    provider = GooglePlacesProvider(enabled=True, api_key=None)
+    provider = GooglePlacesProvider(enabled=True, api_key="")
 
     with pytest.raises(GooglePlacesConfigurationError, match="API key is required"):
         provider.search(QUERY_PLAN)
