@@ -17,11 +17,20 @@ services:
   worker:
     build: .
     command: celery -A app.core.celery worker --loglevel=info
+    shm_size: "1gb"
     environment:
       DATABASE_URL: postgresql+psycopg2://northaccess:northaccess@db:5432/northaccessbfsg
       ENVIRONMENT: development
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      BROWSER_NAME: chromium
+      BROWSER_HEADLESS: "true"
+      BROWSER_NAVIGATION_TIMEOUT_MS: 30000
+      BROWSER_ACTION_TIMEOUT_MS: 10000
+      BROWSER_VIEWPORT_WIDTH: 1440
+      BROWSER_VIEWPORT_HEIGHT: 900
+      BROWSER_RETRIES: 1
+      BROWSER_WAIT_UNTIL: networkidle
     depends_on:
       db:
         condition: service_healthy
