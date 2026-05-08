@@ -2,7 +2,7 @@
 
 NorthAccessBFSG is a FastAPI backend foundation for a BFSG/WCAG compliance audit platform.
 
-The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city and keyword resolution.
+The current scope includes backend infrastructure, asynchronous scans, raw accessibility findings, compliance mapping basics, evidence bundle storage, and a minimal Lead Discovery foundation for city, keyword, provider seed, and company precheck workflows.
 
 ## Project Structure
 
@@ -40,6 +40,7 @@ app/
     providers/
       __init__.py
       base.py
+      google_places_provider.py
       mock_provider.py
     query_planner.py
   evidence/
@@ -48,9 +49,11 @@ app/
     storage.py
     storage_backend.py
   models/
+    company_qualification.py
     discovery_run.py
     lead_candidate.py
   services/
+    company_qualification_service.py
     discovery_service.py
     provider_execution_service.py
   workers/
@@ -160,9 +163,13 @@ curl http://localhost:8000/discovery/runs/{discovery_run_id}
 curl http://localhost:8000/discovery/runs/{discovery_run_id}/candidates
 ```
 
-## Mock Discovery Provider
+## Discovery Providers
 
-The mock provider executes a stored discovery run query plan and persists bounded, deterministic test candidates. It creates obvious mock rows only, for example `Mock Candidate Lübeck 23552 Online Shop`.
+Provider adapters execute a stored query plan and persist `LeadCandidate` rows. These rows are seed candidates only. They are not confirmed BFSG applicability, accessibility findings, legal obligations, violations, or legal conclusions.
+
+### Mock Provider
+
+The mock provider creates bounded, deterministic test candidates with obvious test names, for example `Mock Candidate Lübeck 23552 Online Shop`.
 
 ```bash
 curl -X POST http://localhost:8000/discovery/runs/{discovery_run_id}/providers/mock
@@ -180,7 +187,53 @@ Example provider response:
 }
 ```
 
-This is only a resolver, keyword, query-planner, and mock-provider persistence foundation. Google Maps and live providers are not integrated yet. The system does not scrape websites and does not call external discovery providers. `LeadCandidate` rows are candidate records only; they are not confirmed legal applicability, BFSG violations, or legal conclusions.
+### Google Places API Provider
+
+The Google Places API provider is disabled by default. Tests do not call Google, and normal local runs do not require an API key.
+
+Required environment settings for live use:
+
+```text
+GOOGLE_PLACES_ENABLED=false
+GOOGLE_PLACES_API_KEY=
+GOOGLE_PLACES_TIMEOUT_SECONDS=10
+GOOGLE_PLACES_MAX_RESULTS_PER_QUERY=5
+```
+
+Endpoint:
+
+```bash
+curl -X POST http://localhost:8000/discovery/runs/{discovery_run_id}/providers/google-places
+```
+
+If disabled or missing configuration, the endpoint returns a clear error and does not make an external call. If enabled with a key, Places API responses are mapped into raw `LeadCandidate` seed rows with `source="google_places"`.
+
+Google Places API results are only seed candidates. Northdata-style or comparable company enrichment is required before any candidate can be treated as qualified for downstream audit consideration.
+
+## Company Qualification Precheck
+
+`CompanyQualification` stores precheck signals for a `LeadCandidate`. It is a signal and review layer only. It does not make legal conclusions and it does not call Northdata or any external company-data provider yet.
+
+Precheck endpoints:
+
+```bash
+curl -X POST http://localhost:8000/discovery/candidates/{candidate_id}/qualification/precheck
+curl http://localhost:8000/discovery/candidates/{candidate_id}/qualification
+```
+
+The precheck records available signals such as company name, category, website availability, optional employee/revenue/balance values if already present, confidence, and review status. Missing company data results in `needs_company_data` or `needs_human_review` rather than final qualification. Mock/test candidates remain clearly marked as test data.
+
+Configured microenterprise signal thresholds:
+
+```text
+BFSG_MICROENTERPRISE_EMPLOYEE_THRESHOLD=10
+BFSG_MICROENTERPRISE_REVENUE_THRESHOLD_EUR=2000000
+BFSG_MICROENTERPRISE_BALANCE_THRESHOLD_EUR=2000000
+```
+
+These thresholds are only used as precheck signals. They are not legal scoring and they are not final applicability decisions.
+
+This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
 
 ## Guarded Pipeline
 
