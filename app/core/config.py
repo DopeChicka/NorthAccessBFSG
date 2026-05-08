@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     browser_viewport_height: int = 900
     browser_retries: int = 1
     browser_wait_until: str = "networkidle"
+    evidence_storage_backend: str = "local"
+    evidence_local_root: str = "/app/evidence-data"
+    evidence_s3_bucket: str = ""
+    evidence_s3_prefix: str = "northaccessbfsg/evidence"
+    evidence_s3_endpoint_url: str = ""
+    evidence_s3_region: str = "eu-central-1"
 
     model_config = SettingsConfigDict(
         env_file=".env",
