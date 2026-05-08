@@ -35,7 +35,9 @@ _FINDING_COLUMN_UPDATES = (
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS description TEXT",
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS help_url VARCHAR(500)",
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS wcag_refs JSONB NOT NULL DEFAULT '[]'::jsonb",
+    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS evidence JSONB",
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS confidence_score DOUBLE PRECISION",
+    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS review_status VARCHAR(50) NOT NULL DEFAULT 'pending'",
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS evidence_metadata JSONB NOT NULL DEFAULT '{}'::jsonb",
 )
 

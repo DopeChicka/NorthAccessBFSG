@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.services.axe_homepage_service import (
+    AxeHomepageAuditError,
+    ScanNotFoundError as AxeScanNotFoundError,
+    run_axe_homepage_audit,
+)
 from app.services.browser_smoke_service import (
     BrowserSmokeProbeError,
     ScanNotFoundError,
@@ -39,6 +44,30 @@ def run_browser_smoke(scan_id: str, db: Session = Depends(get_db)) -> dict[str, 
             detail=str(exc),
         ) from exc
     except BrowserSmokeProbeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return {
+        "scan_id": evidence.scan_id,
+        "evidence_id": evidence.id,
+        "evidence_type": evidence.evidence_type,
+        "path_or_key": evidence.path_or_key,
+        "metadata": evidence.evidence_metadata,
+    }
+
+
+@router.post("/{scan_id}/axe-homepage")
+def run_axe_homepage(scan_id: str, db: Session = Depends(get_db)) -> dict[str, object]:
+    try:
+        evidence = run_axe_homepage_audit(db, scan_id)
+    except AxeScanNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except AxeHomepageAuditError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
