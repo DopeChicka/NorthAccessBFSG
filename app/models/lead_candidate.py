@@ -60,3 +60,8 @@ class LeadCandidate(Base):
         back_populates="lead_candidate",
         cascade="all, delete-orphan",
     )
+    scan_readiness_decisions: Mapped[list["ScanReadinessDecision"]] = relationship(
+        "ScanReadinessDecision",
+        back_populates="lead_candidate",
+        cascade="all, delete-orphan",
+    )

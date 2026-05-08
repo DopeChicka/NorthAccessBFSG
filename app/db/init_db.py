@@ -13,6 +13,7 @@ from app.models import (  # noqa: F401
     LeadCandidate,
     PromotionDecision,
     Scan,
+    ScanReadinessDecision,
     WebsiteProbe,
 )
 

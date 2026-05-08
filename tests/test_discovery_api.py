@@ -12,9 +12,14 @@ from app.models import (  # noqa: F401
     CompanyEnrichment,
     CompanyQualification,
     DiscoveryRun,
+    Lead,
     LeadCandidate,
     PromotionDecision,
+    PromotionDecisionStatus,
+    Scan,
+    ScanReadinessDecision,
     WebsiteProbe,
+    WebsiteProbeStatus,
 )
 
 
@@ -305,6 +310,86 @@ def test_live_website_probe_endpoint_disabled_by_default_returns_clear_error(
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Live website probe is disabled"
+
+
+def test_candidate_scan_readiness_endpoints_and_scan_skeleton(
+    db_session: Session,
+) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidate_id = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"][0]["id"]
+    candidate = db_session.get(LeadCandidate, candidate_id)
+    assert candidate is not None
+    candidate.domain = "https://shop.example"
+    promotion = PromotionDecision(
+        lead_candidate_id=candidate.id,
+        status=PromotionDecisionStatus.ready_for_website_probe,
+        reason_code="possible_bfsg_candidate",
+        reasons={"test": True, "no_legal_conclusion": True},
+        confidence_score=0.7,
+    )
+    probe = WebsiteProbe(
+        lead_candidate_id=candidate.id,
+        url="https://shop.example",
+        normalized_domain="shop.example",
+        status=WebsiteProbeStatus.reachable,
+        http_status=200,
+        has_homepage_signal=True,
+        has_b2c_transaction_signal=True,
+        evidence={"test": True, "no_legal_conclusion": True},
+        confidence_score=0.7,
+    )
+    db_session.add_all([promotion, probe])
+    db_session.commit()
+
+    evaluate_response = client.post(
+        f"/discovery/candidates/{candidate_id}/scan-readiness/evaluate"
+    )
+    read_response = client.get(f"/discovery/candidates/{candidate_id}/scan-readiness")
+    scan_response = client.post(f"/discovery/candidates/{candidate_id}/scans")
+
+    assert evaluate_response.status_code == 200
+    evaluation = evaluate_response.json()
+    assert evaluation["candidate_id"] == candidate_id
+    assert evaluation["status"] == "ready_for_scan"
+    assert evaluation["reason_code"] == "ready_for_scan"
+
+    assert read_response.status_code == 200
+    readiness = read_response.json()
+    assert readiness["id"] == evaluation["scan_readiness_decision_id"]
+    assert readiness["reasons"]["no_legal_conclusion"] is True
+
+    assert scan_response.status_code == 201
+    scan = scan_response.json()
+    assert scan["status"] == "pending"
+    assert scan["evidence_metadata"]["lead_candidate_id"] == candidate_id
+    assert (
+        scan["evidence_metadata"]["scan_readiness_decision_id"]
+        == evaluation["scan_readiness_decision_id"]
+    )
+    assert scan["evidence_metadata"]["no_legal_conclusion"] is True
+
+
+def test_candidate_scan_skeleton_requires_ready_scan_readiness(
+    db_session: Session,
+) -> None:
+    client = make_client(db_session)
+    create_response = client.post("/discovery/runs/Lübeck")
+    run_id = create_response.json()["discovery_run_id"]
+    client.post(f"/discovery/runs/{run_id}/providers/mock")
+    candidate_id = client.get(f"/discovery/runs/{run_id}/candidates").json()["candidates"][0]["id"]
+
+    evaluate_response = client.post(
+        f"/discovery/candidates/{candidate_id}/scan-readiness/evaluate"
+    )
+    scan_response = client.post(f"/discovery/candidates/{candidate_id}/scans")
+
+    assert evaluate_response.status_code == 200
+    assert evaluate_response.json()["status"] == "rejected"
+    assert scan_response.status_code == 409
+    assert "not ready for scan" in scan_response.json()["detail"]
 
 
 def test_promotion_unknown_candidate_returns_clear_error(db_session: Session) -> None:
