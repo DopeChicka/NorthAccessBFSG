@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     evidence_s3_prefix: str = "northaccessbfsg/evidence"
     evidence_s3_endpoint_url: str = ""
     evidence_s3_region: str = "eu-central-1"
+    google_places_api_key: str | None = None
+    google_places_enabled: bool = False
+    google_places_timeout_seconds: int = 10
+    google_places_max_results_per_query: int = 5
+    bfsg_microenterprise_employee_threshold: int = 10
+    bfsg_microenterprise_revenue_threshold_eur: int = 2_000_000
+    bfsg_microenterprise_balance_threshold_eur: int = 2_000_000
 
     model_config = SettingsConfigDict(
         env_file=".env",

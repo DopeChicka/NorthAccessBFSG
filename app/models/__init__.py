@@ -1,3 +1,7 @@
+from app.models.company_qualification import (
+    CompanyQualification,
+    CompanyQualificationStatus,
+)
 from app.models.compliance_finding import ComplianceFinding
 from app.models.discovery_run import DiscoveryRun, DiscoveryRunStatus
 from app.models.evidence_bundle import EvidenceBundle
@@ -7,6 +11,8 @@ from app.models.lead_candidate import LeadCandidate
 from app.models.scan import Scan, ScanStatus
 
 __all__ = [
+    "CompanyQualification",
+    "CompanyQualificationStatus",
     "ComplianceFinding",
     "DiscoveryRun",
     "DiscoveryRunStatus",
