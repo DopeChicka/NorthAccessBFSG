@@ -76,12 +76,15 @@ class S3StorageBackend(EvidenceStorageBackend):
         )
 
     def put_bytes(self, *, storage_path: str, content: bytes, content_type: str) -> StoredObject:
+        from botocore.exceptions import ClientError
+
         key = self._key(storage_path)
         try:
             self.client.head_object(Bucket=self.bucket, Key=key)
-        except self.client.exceptions.ClientError as exc:
+        except ClientError as exc:
             status_code = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-            if status_code != 404:
+            error_code = exc.response.get("Error", {}).get("Code")
+            if status_code != 404 and error_code not in {"404", "NoSuchKey", "NotFound"}:
                 raise
         else:
             raise FileExistsError(f"Evidence object already exists: {storage_path}")
