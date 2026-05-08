@@ -45,3 +45,8 @@ class LeadCandidate(Base):
         back_populates="lead_candidate",
         cascade="all, delete-orphan",
     )
+    enrichments: Mapped[list["CompanyEnrichment"]] = relationship(
+        "CompanyEnrichment",
+        back_populates="lead_candidate",
+        cascade="all, delete-orphan",
+    )
