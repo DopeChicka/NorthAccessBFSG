@@ -14,6 +14,7 @@ class ScanStatus(str, enum.Enum):
     pending = "pending"
     running = "running"
     done = "done"
+    failed = "failed"
 
 
 class Scan(Base):
@@ -31,6 +32,9 @@ class Scan(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     lead: Mapped["Lead"] = relationship("Lead", back_populates="scans")
     findings: Mapped[list["Finding"]] = relationship(
