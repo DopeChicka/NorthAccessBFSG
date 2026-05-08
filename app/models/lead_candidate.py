@@ -40,3 +40,8 @@ class LeadCandidate(Base):
     discovery_run: Mapped["DiscoveryRun"] = relationship(
         "DiscoveryRun", back_populates="candidates"
     )
+    qualifications: Mapped[list["CompanyQualification"]] = relationship(
+        "CompanyQualification",
+        back_populates="lead_candidate",
+        cascade="all, delete-orphan",
+    )
