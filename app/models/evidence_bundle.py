@@ -32,7 +32,7 @@ class EvidenceBundle(Base):
     )
     type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     storage_backend: Mapped[str] = mapped_column(String(40), nullable=False)
-    storage_path: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    storage_path: Mapped[str] = mapped_column(Text, nullable=False)
     content_type: Mapped[str] = mapped_column(String(120), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
