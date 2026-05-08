@@ -2,7 +2,15 @@ from sqlalchemy import text
 
 from app.db.base import Base
 from app.db.session import engine
-from app.models import ComplianceFinding, EvidenceBundle, Finding, Lead, Scan  # noqa: F401
+from app.models import (  # noqa: F401
+    ComplianceFinding,
+    DiscoveryRun,
+    EvidenceBundle,
+    Finding,
+    Lead,
+    LeadCandidate,
+    Scan,
+)
 
 _SCAN_ENUM_UPDATES = (
     "ALTER TYPE scan_status ADD VALUE IF NOT EXISTS 'processing'",
