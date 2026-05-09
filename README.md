@@ -479,6 +479,21 @@ The planner always creates a homepage journey when a URL or domain is available.
 
 Journeys are planned technical signals only. They are not legal conclusions, reports, PDFs, letters, or full journey automation.
 
+## Journey Execution And Axe
+
+Journey execution opens exactly one planned journey URL and stores lightweight browser metadata as `journey_smoke` evidence. Axe per journey opens exactly one journey URL, stores `axe_journey` evidence, and creates technical `Finding` rows linked with `journey_id`.
+
+Endpoints:
+
+```bash
+curl -X POST http://localhost:8000/journeys/{journey_id}/execute-smoke
+curl -X POST http://localhost:8000/scans/{scan_id}/journeys/execute-smoke
+curl -X POST http://localhost:8000/journeys/{journey_id}/axe
+curl -X POST http://localhost:8000/scans/{scan_id}/journeys/axe
+```
+
+This is minimal one-URL execution only. It does not crawl, submit forms, automate checkout, generate PDFs, create letters, provide legal advice, or certify anything.
+
 ## Evidence Manifest Hardening
 
 Evidence manifests expose evidence rows with scan ID, related entity fields when present, storage key/path, metadata, hash when already present, creation time, and `missing_hash_count`. This PR does not read files or compute new file hashes.

@@ -240,6 +240,7 @@ def _serialize_finding(finding: Finding) -> dict[str, Any]:
     return {
         "id": finding.id,
         "scan_id": finding.scan_id,
+        "journey_id": finding.journey_id,
         "rule_id": finding.rule_id,
         "severity": finding.severity,
         "description": finding.description,
@@ -267,6 +268,8 @@ def _serialize_journey(journey: Journey) -> dict[str, Any]:
         "evidence": journey.evidence,
         "created_at": journey.created_at.isoformat() if journey.created_at else None,
         "updated_at": journey.updated_at.isoformat() if journey.updated_at else None,
+        "executed_at": journey.executed_at.isoformat() if journey.executed_at else None,
+        "error_message": journey.error_message,
         "planned_signal_only": True,
         "no_legal_conclusion": True,
     }

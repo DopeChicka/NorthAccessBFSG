@@ -19,6 +19,9 @@ class Finding(Base):
     scan_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("scans.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    journey_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("journeys.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     rule_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     severity: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
