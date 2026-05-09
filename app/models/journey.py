@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -26,6 +26,8 @@ class JourneyStatus(str, enum.Enum):
     planned = "planned"
     skipped = "skipped"
     ready = "ready"
+    running = "running"
+    done = "done"
     failed = "failed"
 
 
@@ -60,5 +62,9 @@ class Journey(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    executed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     scan: Mapped["Scan"] = relationship("Scan", back_populates="journeys")
