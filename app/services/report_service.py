@@ -13,11 +13,14 @@ from app.models import (
     ReportStatus,
     ReportType,
     ReviewItem,
+    ReviewItemStatus,
     ReviewSubjectType,
     Scan,
     WebsiteProbe,
 )
 from app.services.evidence_manifest_service import build_evidence_manifest
+from app.services.evidence_quality_service import assess_scan_evidence_quality
+from app.services.review_finalization_service import summarize_scan_review_status
 
 
 class ScanNotFoundError(Exception):
@@ -47,15 +50,19 @@ def generate_scan_json_report(db: Session, scan_id: str) -> Report:
     try:
         generated_at = datetime.now(UTC)
         evidence_manifest = build_evidence_manifest(db, scan_id)
+        evidence_quality = assess_scan_evidence_quality(db, scan_id)
         journeys = _list_journeys(db, scan_id)
         findings = _list_findings(db, scan_id)
         compliance_mappings = _list_compliance_mappings(db, findings)
         review_items = _list_review_items(db, scan, findings, compliance_mappings)
+        review_summary = summarize_scan_review_status(db, scan_id)
+        finding_review_outcomes = _build_finding_review_outcomes(findings, review_items)
         summary = _build_summary(
             findings=findings,
             compliance_mappings=compliance_mappings,
             review_items=review_items,
             evidence_manifest=evidence_manifest,
+            finding_review_outcomes=finding_review_outcomes,
         )
         output = {
             "report_id": report.id,
@@ -63,13 +70,27 @@ def generate_scan_json_report(db: Session, scan_id: str) -> Report:
             "generated_at": generated_at.isoformat(),
             "scan": _serialize_scan(scan),
             "journeys": [_serialize_journey(journey) for journey in journeys],
-            "findings": [_serialize_finding(finding) for finding in findings],
+            "findings": [
+                _serialize_finding(
+                    finding,
+                    review_outcome=finding_review_outcomes[finding.id]["review_outcome"],
+                    excluded_from_final_summary=finding_review_outcomes[finding.id][
+                        "excluded_from_final_summary"
+                    ],
+                )
+                for finding in findings
+            ],
             "compliance_mappings": [
                 _serialize_compliance_mapping(mapping)
                 for mapping in compliance_mappings
             ],
             "review_items": [_serialize_review_item(item) for item in review_items],
             "evidence_manifest": evidence_manifest,
+            "evidence_quality": evidence_quality,
+            "review_summary": review_summary,
+            "reviewed_finding_count": summary["reviewed_finding_count"],
+            "rejected_finding_count": summary["rejected_finding_count"],
+            "pending_review_count": summary["pending_review_count"],
             "summary": summary,
             "no_legal_conclusion": True,
         }
@@ -202,6 +223,7 @@ def _build_summary(
     compliance_mappings: list[ComplianceMapping],
     review_items: list[ReviewItem],
     evidence_manifest: dict[str, Any],
+    finding_review_outcomes: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for finding in findings:
@@ -209,11 +231,30 @@ def _build_summary(
         if severity in severity_counts:
             severity_counts[severity] += 1
 
+    reviewed_finding_count = sum(
+        1
+        for outcome in finding_review_outcomes.values()
+        if outcome["review_outcome"] in {"approved", "rejected"}
+    )
+    rejected_finding_count = sum(
+        1
+        for outcome in finding_review_outcomes.values()
+        if outcome["review_outcome"] == "rejected"
+    )
+    pending_review_count = sum(
+        1
+        for outcome in finding_review_outcomes.values()
+        if outcome["review_outcome"] == "pending"
+    )
+
     return {
         "finding_count": len(findings),
         "compliance_mapping_count": len(compliance_mappings),
         "review_item_count": len(review_items),
         "evidence_count": evidence_manifest["evidence_count"],
+        "reviewed_finding_count": reviewed_finding_count,
+        "rejected_finding_count": rejected_finding_count,
+        "pending_review_count": pending_review_count,
         "critical_count": severity_counts["critical"],
         "high_count": severity_counts["high"],
         "medium_count": severity_counts["medium"],
@@ -236,7 +277,12 @@ def _serialize_scan(scan: Scan) -> dict[str, Any]:
     }
 
 
-def _serialize_finding(finding: Finding) -> dict[str, Any]:
+def _serialize_finding(
+    finding: Finding,
+    *,
+    review_outcome: str = "pending",
+    excluded_from_final_summary: bool = False,
+) -> dict[str, Any]:
     return {
         "id": finding.id,
         "scan_id": finding.scan_id,
@@ -249,6 +295,8 @@ def _serialize_finding(finding: Finding) -> dict[str, Any]:
         "evidence": finding.evidence,
         "confidence_score": finding.confidence_score,
         "review_status": finding.review_status,
+        "review_outcome": review_outcome,
+        "excluded_from_final_summary": excluded_from_final_summary,
         "evidence_metadata": finding.evidence_metadata,
         "created_at": finding.created_at.isoformat() if finding.created_at else None,
         "signal_only": True,
@@ -309,3 +357,35 @@ def _serialize_review_item(item: ReviewItem) -> dict[str, Any]:
         "human_workflow_only": True,
         "no_legal_conclusion": True,
     }
+
+
+def _build_finding_review_outcomes(
+    findings: list[Finding],
+    review_items: list[ReviewItem],
+) -> dict[str, dict[str, Any]]:
+    status_by_finding: dict[str, list[ReviewItemStatus]] = {
+        finding.id: [] for finding in findings
+    }
+    for item in review_items:
+        if item.subject_type != ReviewSubjectType.finding:
+            continue
+        if item.subject_id not in status_by_finding:
+            continue
+        status_by_finding[item.subject_id].append(item.status)
+
+    outcomes: dict[str, dict[str, Any]] = {}
+    for finding in findings:
+        statuses = status_by_finding.get(finding.id, [])
+        if ReviewItemStatus.rejected in statuses:
+            review_outcome = "rejected"
+        elif ReviewItemStatus.approved in statuses:
+            review_outcome = "approved"
+        else:
+            review_outcome = "pending"
+
+        outcomes[finding.id] = {
+            "review_outcome": review_outcome,
+            "excluded_from_final_summary": review_outcome == "rejected",
+            "no_legal_conclusion": True,
+        }
+    return outcomes

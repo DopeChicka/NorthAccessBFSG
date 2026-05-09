@@ -460,7 +460,14 @@ curl http://localhost:8000/reports/{report_id}
 curl http://localhost:8000/scans/{scan_id}/reports
 ```
 
-The evidence manifest lists stored `ScanEvidence` rows for the scan: evidence ID, evidence type, scan ID, related entity fields when present, storage key/path, metadata, hash when already present, and creation time. It also includes `missing_hash_count`. It does not read large files or require filesystem access.
+Report output also includes:
+
+- `evidence_quality` (quality snapshot for scan evidence)
+- `review_summary` (human review status summary)
+- finding-level `review_outcome` (`approved`, `rejected`, `pending`)
+- finding-level `excluded_from_final_summary` when review outcome is `rejected`
+
+Rejected findings are not deleted. They remain in raw report output and are marked for summary exclusion only.
 
 This is JSON only. It is not a PDF, letter, legal advice, certification, or final applicability decision.
 
@@ -496,7 +503,31 @@ This is minimal one-URL execution only. It does not crawl, submit forms, automat
 
 ## Evidence Manifest Hardening
 
-Evidence manifests expose evidence rows with scan ID, related entity fields when present, storage key/path, metadata, hash when already present, creation time, and `missing_hash_count`. This PR does not read files or compute new file hashes.
+Evidence manifests expose evidence rows with scan ID, related entity fields when present, storage key/path, metadata, hash when already present, and creation time. They also include:
+
+- `evidence_count`
+- `missing_hash_count`
+- `missing_related_entity_count`
+- `evidence_types` counts
+- `related_entity_types` counts
+
+Scan evidence quality endpoint:
+
+```bash
+curl http://localhost:8000/scans/{scan_id}/evidence/quality
+```
+
+The quality result reports whether evidence is `insufficient`, `partial`, or `usable` based on available technical evidence signals.
+
+Review summary endpoint:
+
+```bash
+curl http://localhost:8000/scans/{scan_id}/review/summary
+```
+
+The review summary reports pending/approved/rejected/needs-more-info counts and whether blocking review items remain.
+
+These summaries are workflow signals only. They are not legal certification or legal conclusions.
 
 ## Delta Comparison Foundation
 

@@ -131,3 +131,108 @@ def test_axe_homepage_endpoint_returns_evidence(monkeypatch) -> None:
     finally:
         db_session.close()
         Base.metadata.drop_all(bind=engine)
+
+
+def test_scan_evidence_quality_endpoint_returns_summary(monkeypatch) -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    db_session = TestingSessionLocal()
+    try:
+        lead = Lead(domain="example.com", company_name="Example GmbH")
+        db_session.add(lead)
+        db_session.flush()
+        scan = Scan(lead_id=lead.id, status=ScanStatus.pending)
+        db_session.add(scan)
+        db_session.commit()
+        db_session.refresh(scan)
+
+        def fake_assess_scan_evidence_quality(
+            db: Session, scan_id: str
+        ) -> dict[str, object]:
+            assert scan_id == scan.id
+            return {
+                "scan_id": scan.id,
+                "evidence_count": 1,
+                "missing_hash_count": 1,
+                "missing_related_entity_count": 0,
+                "has_journey_evidence": False,
+                "has_axe_evidence": True,
+                "has_browser_smoke_evidence": False,
+                "quality_status": "usable",
+                "reasons": ["includes_axe_evidence"],
+                "no_legal_conclusion": True,
+            }
+
+        monkeypatch.setattr(
+            scans_api,
+            "assess_scan_evidence_quality",
+            fake_assess_scan_evidence_quality,
+        )
+        client = _make_client(db_session)
+
+        response = client.get(f"/scans/{scan.id}/evidence/quality")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["scan_id"] == scan.id
+        assert payload["quality_status"] == "usable"
+        assert payload["no_legal_conclusion"] is True
+    finally:
+        db_session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+def test_scan_review_summary_endpoint_returns_summary(monkeypatch) -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    db_session = TestingSessionLocal()
+    try:
+        lead = Lead(domain="example.com", company_name="Example GmbH")
+        db_session.add(lead)
+        db_session.flush()
+        scan = Scan(lead_id=lead.id, status=ScanStatus.pending)
+        db_session.add(scan)
+        db_session.commit()
+        db_session.refresh(scan)
+
+        def fake_summarize_scan_review_status(
+            db: Session, scan_id: str
+        ) -> dict[str, object]:
+            assert scan_id == scan.id
+            return {
+                "pending_count": 1,
+                "approved_count": 0,
+                "rejected_count": 0,
+                "needs_more_info_count": 0,
+                "total_review_items": 1,
+                "has_blocking_reviews": True,
+                "no_legal_conclusion": True,
+            }
+
+        monkeypatch.setattr(
+            scans_api,
+            "summarize_scan_review_status",
+            fake_summarize_scan_review_status,
+        )
+        client = _make_client(db_session)
+
+        response = client.get(f"/scans/{scan.id}/review/summary")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["pending_count"] == 1
+        assert payload["has_blocking_reviews"] is True
+        assert payload["no_legal_conclusion"] is True
+    finally:
+        db_session.close()
+        Base.metadata.drop_all(bind=engine)
