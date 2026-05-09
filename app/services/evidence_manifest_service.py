@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.models import ScanEvidence
 
 
-def build_evidence_manifest(db: Session, scan_id: str) -> dict[str, Any]:
+def build_evidence_manifest_for_scan(db: Session, scan_id: str) -> dict[str, Any]:
     evidence_rows = (
         db.query(ScanEvidence)
         .filter(ScanEvidence.scan_id == scan_id)
@@ -19,12 +19,17 @@ def build_evidence_manifest(db: Session, scan_id: str) -> dict[str, Any]:
         {
             "evidence_id": evidence.id,
             "evidence_type": evidence.evidence_type,
+            "scan_id": evidence.scan_id,
+            "related_entity_type": evidence.related_entity_type,
+            "related_entity_id": evidence.related_entity_id,
+            "storage_key": evidence.path_or_key,
             "path_or_key": evidence.path_or_key,
             "metadata": evidence.evidence_metadata,
             "hash": evidence.hash,
             "created_at": evidence.created_at.isoformat()
             if evidence.created_at
             else None,
+            "no_legal_conclusion": True,
         }
         for evidence in evidence_rows
     ]
@@ -32,6 +37,11 @@ def build_evidence_manifest(db: Session, scan_id: str) -> dict[str, Any]:
     return {
         "scan_id": scan_id,
         "evidence_count": len(items),
+        "missing_hash_count": sum(1 for item in items if item["hash"] is None),
         "items": items,
         "no_legal_conclusion": True,
     }
+
+
+def build_evidence_manifest(db: Session, scan_id: str) -> dict[str, Any]:
+    return build_evidence_manifest_for_scan(db, scan_id)

@@ -9,6 +9,7 @@ from app.models.delta_comparison import DeltaComparison, DeltaComparisonStatus
 from app.models.discovery_run import DiscoveryRun, DiscoveryRunStatus
 from app.models.evidence_bundle import EvidenceBundle
 from app.models.finding import Finding
+from app.models.journey import Journey, JourneyStatus, JourneyType
 from app.models.lead import Lead
 from app.models.lead_candidate import LeadCandidate
 from app.models.promotion_decision import (
@@ -44,6 +45,9 @@ __all__ = [
     "DiscoveryRunStatus",
     "EvidenceBundle",
     "Finding",
+    "Journey",
+    "JourneyStatus",
+    "JourneyType",
     "Lead",
     "LeadCandidate",
     "PromotionDecision",

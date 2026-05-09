@@ -9,6 +9,7 @@ from app.api.delta import router as delta_router
 from app.api.discovery import router as discovery_router
 from app.api.evidence import router as evidence_router
 from app.api.health import router as health_router
+from app.api.journeys import router as journeys_router
 from app.api.reports import router as reports_router
 from app.api.review import router as review_router
 from app.api.scans import router as scans_router
@@ -35,5 +36,6 @@ app.include_router(compliance_mapping_router)
 app.include_router(delta_router)
 app.include_router(evidence_router)
 app.include_router(discovery_router)
+app.include_router(journeys_router)
 app.include_router(review_router)
 app.include_router(reports_router)

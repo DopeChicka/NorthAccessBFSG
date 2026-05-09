@@ -11,6 +11,7 @@ from app.models import (  # noqa: F401
     DiscoveryRun,
     EvidenceBundle,
     Finding,
+    Journey,
     Lead,
     LeadCandidate,
     PromotionDecision,
@@ -45,11 +46,17 @@ _FINDING_COLUMN_UPDATES = (
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS evidence_metadata JSONB NOT NULL DEFAULT '{}'::jsonb",
 )
 
+_SCAN_EVIDENCE_COLUMN_UPDATES = (
+    "ALTER TABLE scan_evidence ADD COLUMN IF NOT EXISTS related_entity_type VARCHAR(80)",
+    "ALTER TABLE scan_evidence ADD COLUMN IF NOT EXISTS related_entity_id VARCHAR(36)",
+)
+
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_scan_lifecycle_schema()
     _ensure_finding_evidence_schema()
+    _ensure_scan_evidence_related_entity_schema()
 
 
 def _ensure_scan_lifecycle_schema() -> None:
@@ -72,4 +79,13 @@ def _ensure_finding_evidence_schema() -> None:
 
     with engine.begin() as connection:
         for statement in _FINDING_COLUMN_UPDATES:
+            connection.execute(text(statement))
+
+
+def _ensure_scan_evidence_related_entity_schema() -> None:
+    if engine.dialect.name != "postgresql":
+        return
+
+    with engine.begin() as connection:
+        for statement in _SCAN_EVIDENCE_COLUMN_UPDATES:
             connection.execute(text(statement))

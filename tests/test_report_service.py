@@ -10,6 +10,9 @@ from app.models import (  # noqa: F401
     ComplianceMapping,
     EvidenceBundle,
     Finding,
+    Journey,
+    JourneyStatus,
+    JourneyType,
     Lead,
     Report,
     ReportStatus,
@@ -103,6 +106,16 @@ def _create_scan_fixture(db_session: Session) -> tuple[Scan, Finding, Compliance
         evidence={"source": "test", "no_legal_conclusion": True},
     )
     db_session.add(review_item)
+    journey = Journey(
+        scan_id=scan.id,
+        journey_type=JourneyType.homepage,
+        status=JourneyStatus.ready,
+        start_url="https://example.com",
+        detected_url="https://example.com",
+        signals={"no_legal_conclusion": True},
+        evidence={"source": "test", "no_legal_conclusion": True},
+    )
+    db_session.add(journey)
     db_session.commit()
     db_session.refresh(scan)
     db_session.refresh(finding)
@@ -117,7 +130,12 @@ def test_evidence_manifest_collects_scan_evidence(db_session: Session) -> None:
 
     assert manifest["scan_id"] == scan.id
     assert manifest["evidence_count"] == 1
+    assert manifest["missing_hash_count"] == 1
     assert manifest["items"][0]["evidence_type"] == "axe_homepage"
+    assert manifest["items"][0]["scan_id"] == scan.id
+    assert manifest["items"][0]["related_entity_type"] is None
+    assert manifest["items"][0]["related_entity_id"] is None
+    assert manifest["items"][0]["storage_key"].endswith("axe-homepage.json")
     assert manifest["items"][0]["path_or_key"].endswith("axe-homepage.json")
     assert manifest["items"][0]["hash"] is None
     assert manifest["no_legal_conclusion"] is True
@@ -148,6 +166,16 @@ def test_report_includes_compliance_mappings_and_review_items(
     assert report.output["compliance_mappings"][0]["reference_signal_only"] is True
     assert len(report.output["review_items"]) == 1
     assert report.output["review_items"][0]["human_workflow_only"] is True
+
+
+def test_report_includes_journeys(db_session: Session) -> None:
+    scan, _, _ = _create_scan_fixture(db_session)
+
+    report = generate_scan_json_report(db_session, scan.id)
+
+    assert len(report.output["journeys"]) == 1
+    assert report.output["journeys"][0]["journey_type"] == "homepage"
+    assert report.output["journeys"][0]["planned_signal_only"] is True
 
 
 def test_report_summary_counts_are_correct(db_session: Session) -> None:
