@@ -17,6 +17,7 @@ app/
     discovery.py
     evidence.py
     health.py
+    reports.py
     review.py
     scans.py
   compliance/
@@ -444,6 +445,22 @@ curl -X PATCH http://localhost:8000/review/items/{review_item_id}
 Review items are created automatically for compliance mappings with `review_required=true`, pending high or critical findings, and website probes with `needs_review` status.
 
 This is a human review workflow only. It is not legal advice, certification, reporting, PDF generation, letters, or a final applicability decision. It does not decide legal obligation; it only routes technical and compliance reference signals for manual review.
+
+## Report JSON Foundation
+
+The JSON report endpoint generates a machine-readable snapshot for one scan. It includes scan metadata, technical findings, compliance reference mappings, review queue items, summary counts, and an evidence manifest.
+
+Endpoints:
+
+```bash
+curl -X POST http://localhost:8000/scans/{scan_id}/reports/json
+curl http://localhost:8000/reports/{report_id}
+curl http://localhost:8000/scans/{scan_id}/reports
+```
+
+The evidence manifest lists stored `ScanEvidence` rows for the scan: evidence ID, evidence type, path or key, metadata, hash when already present, and creation time. It does not read large files or require filesystem access.
+
+This is JSON only. It is not a PDF, letter, legal advice, certification, or final applicability decision.
 
 ## Validation
 
