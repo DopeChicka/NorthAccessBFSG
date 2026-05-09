@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Enum, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, Enum, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -34,14 +34,6 @@ class ReviewPriority(str, enum.Enum):
 
 class ReviewItem(Base):
     __tablename__ = "review_items"
-    __table_args__ = (
-        UniqueConstraint(
-            "subject_type",
-            "subject_id",
-            "reason_code",
-            name="uq_review_items_subject_reason",
-        ),
-    )
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())

@@ -47,7 +47,7 @@ def test_review_item_api_create_list_get_and_update() -> None:
 
         list_response = client.get("/review/items?status=pending")
         assert list_response.status_code == 200
-        assert len(list_response.json()) == 1
+        assert len(list_response.json()["items"]) == 1
 
         get_response = client.get(f"/review/items/{created['id']}")
         assert get_response.status_code == 200

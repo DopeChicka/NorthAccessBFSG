@@ -427,7 +427,7 @@ Known axe rule IDs map to predefined reference lists. Unknown axe rule IDs map t
 
 These mappings are technical references and review signals only. They are not legal advice, certification, reports, PDFs, letters, or final applicability decisions.
 
-## Review Queue
+## Review Queue Foundation
 
 The review queue stores human review work items for technical signals that need a person to inspect them. It can track findings, compliance mappings, candidates, and website probes.
 
@@ -443,7 +443,7 @@ curl -X PATCH http://localhost:8000/review/items/{review_item_id}
 
 Review items are created automatically for compliance mappings with `review_required=true`, pending high or critical findings, and website probes with `needs_review` status.
 
-This is a human review workflow only. It is not legal advice, certification, reporting, PDF generation, letters, or a final applicability decision.
+This is a human review workflow only. It is not legal advice, certification, reporting, PDF generation, letters, or a final applicability decision. It does not decide legal obligation; it only routes technical and compliance reference signals for manual review.
 
 ## Validation
 

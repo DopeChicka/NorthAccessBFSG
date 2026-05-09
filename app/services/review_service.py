@@ -21,41 +21,57 @@ class ReviewItemNotFoundError(Exception):
     pass
 
 
+class ReviewSubjectNotFoundError(Exception):
+    pass
+
+
+class ReviewItemValidationError(ValueError):
+    pass
+
+
 def create_review_item(
     db: Session,
-    *,
-    subject_type: ReviewSubjectType | str,
+    subject_type: str,
     subject_id: str,
     reason_code: str,
-    priority: ReviewPriority | str = ReviewPriority.medium,
-    notes: str | None = None,
-    reviewer: str | None = None,
+    priority: str = "medium",
     evidence: dict[str, Any] | None = None,
-    status: ReviewItemStatus | str = ReviewItemStatus.pending,
-    commit: bool = True,
+    notes: str | None = None,
+) -> ReviewItem:
+    return _create_review_item(
+        db,
+        subject_type=_coerce_subject_type(subject_type),
+        subject_id=subject_id,
+        reason_code=reason_code,
+        priority=_coerce_priority(priority),
+        evidence=evidence,
+        notes=notes,
+        commit=True,
+    )
+
+
+def _create_review_item(
+    db: Session,
+    *,
+    subject_type: ReviewSubjectType,
+    subject_id: str,
+    reason_code: str,
+    priority: ReviewPriority,
+    evidence: dict[str, Any] | None = None,
+    notes: str | None = None,
+    commit: bool,
 ) -> ReviewItem:
     subject_type_value = _coerce_subject_type(subject_type)
     priority_value = _coerce_priority(priority)
-    status_value = _coerce_status(status)
-    existing = _find_existing_review_item(
-        db,
-        subject_type=subject_type_value,
-        subject_id=subject_id,
-        reason_code=reason_code,
-    )
-    if existing is not None:
-        return existing
 
     item = ReviewItem(
         subject_type=subject_type_value,
         subject_id=subject_id,
-        status=status_value,
+        status=ReviewItemStatus.pending,
         reason_code=reason_code,
         priority=priority_value,
         notes=notes,
-        reviewer=reviewer,
         evidence={**(evidence or {}), "no_legal_conclusion": True},
-        reviewed_at=_reviewed_at_for_status(status_value),
     )
     db.add(item)
     if commit:
@@ -75,7 +91,6 @@ def get_review_item(db: Session, review_item_id: str) -> ReviewItem:
 
 def list_review_items(
     db: Session,
-    *,
     status: ReviewItemStatus | str | None = None,
     subject_type: ReviewSubjectType | str | None = None,
 ) -> list[ReviewItem]:
@@ -93,11 +108,9 @@ def list_review_items(
 def update_review_item_status(
     db: Session,
     review_item_id: str,
-    *,
     status: ReviewItemStatus | str,
-    notes: str | None = None,
     reviewer: str | None = None,
-    evidence: dict[str, Any] | None = None,
+    notes: str | None = None,
 ) -> ReviewItem:
     item = get_review_item(db, review_item_id)
     status_value = _coerce_status(status)
@@ -107,15 +120,38 @@ def update_review_item_status(
         item.notes = notes
     if reviewer is not None:
         item.reviewer = reviewer
-    if evidence is not None:
-        item.evidence = {
-            **(item.evidence or {}),
-            **evidence,
-            "no_legal_conclusion": True,
-        }
     db.commit()
     db.refresh(item)
     return item
+
+
+def create_review_for_compliance_mapping_if_required(
+    db: Session, compliance_mapping_id: str
+) -> ReviewItem | None:
+    mapping = db.get(ComplianceMapping, compliance_mapping_id)
+    if mapping is None:
+        raise ReviewSubjectNotFoundError(
+            f"Compliance mapping not found: {compliance_mapping_id}"
+        )
+    return auto_create_review_item_for_compliance_mapping(db, mapping, commit=True)
+
+
+def create_review_for_finding_if_required(
+    db: Session, finding_id: str
+) -> ReviewItem | None:
+    finding = db.get(Finding, finding_id)
+    if finding is None:
+        raise ReviewSubjectNotFoundError(f"Finding not found: {finding_id}")
+    return auto_create_review_item_for_finding(db, finding, commit=True)
+
+
+def create_review_for_website_probe_if_required(
+    db: Session, website_probe_id: str
+) -> ReviewItem | None:
+    probe = db.get(WebsiteProbe, website_probe_id)
+    if probe is None:
+        raise ReviewSubjectNotFoundError(f"Website probe not found: {website_probe_id}")
+    return auto_create_review_item_for_website_probe(db, probe, commit=True)
 
 
 def auto_create_review_item_for_compliance_mapping(
@@ -124,17 +160,21 @@ def auto_create_review_item_for_compliance_mapping(
     if not mapping.review_required:
         return None
 
-    priority = (
-        ReviewPriority.high
-        if mapping.confidence_score <= 0.3
-        else ReviewPriority.medium
-    )
-    return create_review_item(
+    existing = _find_pending_review_item(
         db,
         subject_type=ReviewSubjectType.compliance_mapping,
         subject_id=mapping.id,
         reason_code="compliance_mapping_review_required",
-        priority=priority,
+    )
+    if existing is not None:
+        return existing
+
+    return _create_review_item(
+        db,
+        subject_type=ReviewSubjectType.compliance_mapping,
+        subject_id=mapping.id,
+        reason_code="compliance_mapping_review_required",
+        priority=ReviewPriority.medium,
         evidence={
             "source": "compliance_mapping",
             "finding_id": mapping.finding_id,
@@ -157,11 +197,20 @@ def auto_create_review_item_for_finding(
         return None
 
     priority = ReviewPriority.critical if severity == "critical" else ReviewPriority.high
-    return create_review_item(
+    existing = _find_pending_review_item(
         db,
         subject_type=ReviewSubjectType.finding,
         subject_id=finding.id,
-        reason_code="finding_priority_review",
+        reason_code="high_severity_finding_review",
+    )
+    if existing is not None:
+        return existing
+
+    return _create_review_item(
+        db,
+        subject_type=ReviewSubjectType.finding,
+        subject_id=finding.id,
+        reason_code="high_severity_finding_review",
         priority=priority,
         evidence={
             "source": "finding",
@@ -180,7 +229,16 @@ def auto_create_review_item_for_website_probe(
     if probe.status != WebsiteProbeStatus.needs_review:
         return None
 
-    return create_review_item(
+    existing = _find_pending_review_item(
+        db,
+        subject_type=ReviewSubjectType.website_probe,
+        subject_id=probe.id,
+        reason_code="website_probe_needs_review",
+    )
+    if existing is not None:
+        return existing
+
+    return _create_review_item(
         db,
         subject_type=ReviewSubjectType.website_probe,
         subject_id=probe.id,
@@ -196,7 +254,7 @@ def auto_create_review_item_for_website_probe(
     )
 
 
-def _find_existing_review_item(
+def _find_pending_review_item(
     db: Session,
     *,
     subject_type: ReviewSubjectType,
@@ -209,21 +267,37 @@ def _find_existing_review_item(
             ReviewItem.subject_type == subject_type,
             ReviewItem.subject_id == subject_id,
             ReviewItem.reason_code == reason_code,
+            ReviewItem.status == ReviewItemStatus.pending,
         )
         .one_or_none()
     )
 
 
 def _coerce_subject_type(value: ReviewSubjectType | str) -> ReviewSubjectType:
-    return value if isinstance(value, ReviewSubjectType) else ReviewSubjectType(value)
+    if isinstance(value, ReviewSubjectType):
+        return value
+    try:
+        return ReviewSubjectType(value)
+    except ValueError as exc:
+        raise ReviewItemValidationError(f"Invalid subject_type: {value}") from exc
 
 
 def _coerce_status(value: ReviewItemStatus | str) -> ReviewItemStatus:
-    return value if isinstance(value, ReviewItemStatus) else ReviewItemStatus(value)
+    if isinstance(value, ReviewItemStatus):
+        return value
+    try:
+        return ReviewItemStatus(value)
+    except ValueError as exc:
+        raise ReviewItemValidationError(f"Invalid status: {value}") from exc
 
 
 def _coerce_priority(value: ReviewPriority | str) -> ReviewPriority:
-    return value if isinstance(value, ReviewPriority) else ReviewPriority(value)
+    if isinstance(value, ReviewPriority):
+        return value
+    try:
+        return ReviewPriority(value)
+    except ValueError as exc:
+        raise ReviewItemValidationError(f"Invalid priority: {value}") from exc
 
 
 def _reviewed_at_for_status(status: ReviewItemStatus) -> datetime | None:

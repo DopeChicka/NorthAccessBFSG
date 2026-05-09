@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models import ReviewItem, ReviewItemStatus, ReviewPriority, ReviewSubjectType
 from app.services.review_service import (
+    ReviewItemValidationError,
     ReviewItemNotFoundError,
     create_review_item,
     get_review_item,
@@ -25,7 +26,6 @@ class ReviewItemCreateRequest(BaseModel):
     reason_code: str
     priority: ReviewPriority = ReviewPriority.medium
     notes: str | None = None
-    reviewer: str | None = None
     evidence: dict[str, Any] | None = None
 
 
@@ -33,7 +33,6 @@ class ReviewItemUpdateRequest(BaseModel):
     status: ReviewItemStatus
     notes: str | None = None
     reviewer: str | None = None
-    evidence: dict[str, Any] | None = None
 
 
 @router.get("/items")
@@ -41,13 +40,13 @@ def list_items(
     status_filter: ReviewItemStatus | None = Query(default=None, alias="status"),
     subject_type: ReviewSubjectType | None = None,
     db: Session = Depends(get_db),
-) -> list[dict[str, Any]]:
+) -> dict[str, list[dict[str, Any]]]:
     items = list_review_items(
         db,
         status=status_filter,
         subject_type=subject_type,
     )
-    return [_serialize_review_item(item) for item in items]
+    return {"items": [_serialize_review_item(item) for item in items]}
 
 
 @router.get("/items/{review_item_id}")
@@ -66,16 +65,21 @@ def get_item(review_item_id: str, db: Session = Depends(get_db)) -> dict[str, An
 def create_item(
     request: ReviewItemCreateRequest, db: Session = Depends(get_db)
 ) -> dict[str, Any]:
-    item = create_review_item(
-        db,
-        subject_type=request.subject_type,
-        subject_id=request.subject_id,
-        reason_code=request.reason_code,
-        priority=request.priority,
-        notes=request.notes,
-        reviewer=request.reviewer,
-        evidence=request.evidence,
-    )
+    try:
+        item = create_review_item(
+            db,
+            subject_type=request.subject_type,
+            subject_id=request.subject_id,
+            reason_code=request.reason_code,
+            priority=request.priority,
+            evidence=request.evidence,
+            notes=request.notes,
+        )
+    except ReviewItemValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
     return _serialize_review_item(item)
 
 
@@ -90,9 +94,8 @@ def update_item(
             db,
             review_item_id,
             status=request.status,
-            notes=request.notes,
             reviewer=request.reviewer,
-            evidence=request.evidence,
+            notes=request.notes,
         )
     except ReviewItemNotFoundError as exc:
         raise HTTPException(
