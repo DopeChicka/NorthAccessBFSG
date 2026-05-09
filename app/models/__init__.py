@@ -21,6 +21,7 @@ from app.models.review_item import (
     ReviewPriority,
     ReviewSubjectType,
 )
+from app.models.report import Report, ReportStatus, ReportType
 from app.models.scan import Scan, ScanStatus
 from app.models.scan_evidence import ScanEvidence
 from app.models.scan_readiness_decision import (
@@ -49,6 +50,9 @@ __all__ = [
     "ReviewItemStatus",
     "ReviewPriority",
     "ReviewSubjectType",
+    "Report",
+    "ReportStatus",
+    "ReportType",
     "Scan",
     "ScanEvidence",
     "ScanReadinessDecision",
