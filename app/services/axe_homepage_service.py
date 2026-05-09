@@ -11,6 +11,7 @@ from app.core.browser_config import BrowserConfig, get_browser_config
 from app.models.finding import Finding
 from app.models.scan import Scan, ScanStatus
 from app.models.scan_evidence import ScanEvidence
+from app.services.review_service import auto_create_review_item_for_finding
 
 _SEVERITY_BY_AXE_IMPACT = {
     "critical": "critical",
@@ -106,7 +107,10 @@ def run_axe_homepage_audit(
     db.flush()
 
     for violation in result.violations:
-        db.add(_finding_from_violation(scan, evidence, result, violation))
+        finding = _finding_from_violation(scan, evidence, result, violation)
+        db.add(finding)
+        db.flush()
+        auto_create_review_item_for_finding(db, finding)
 
     scan.status = ScanStatus.done
     scan.completed_at = datetime.now(UTC)

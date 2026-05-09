@@ -17,6 +17,7 @@ app/
     discovery.py
     evidence.py
     health.py
+    review.py
     scans.py
   compliance/
     __init__.py
@@ -425,6 +426,24 @@ curl -X POST http://localhost:8000/scans/{scan_id}/compliance/map
 Known axe rule IDs map to predefined reference lists. Unknown axe rule IDs map to empty reference lists with `review_required=true` and low confidence.
 
 These mappings are technical references and review signals only. They are not legal advice, certification, reports, PDFs, letters, or final applicability decisions.
+
+## Review Queue Foundation
+
+The review queue stores human review work items for technical signals that need a person to inspect them. It can track findings, compliance mappings, candidates, and website probes.
+
+Endpoints:
+
+```bash
+curl http://localhost:8000/review/items
+curl "http://localhost:8000/review/items?status=pending&subject_type=finding"
+curl http://localhost:8000/review/items/{review_item_id}
+curl -X POST http://localhost:8000/review/items
+curl -X PATCH http://localhost:8000/review/items/{review_item_id}
+```
+
+Review items are created automatically for compliance mappings with `review_required=true`, pending high or critical findings, and website probes with `needs_review` status.
+
+This is a human review workflow only. It is not legal advice, certification, reporting, PDF generation, letters, or a final applicability decision. It does not decide legal obligation; it only routes technical and compliance reference signals for manual review.
 
 ## Validation
 
