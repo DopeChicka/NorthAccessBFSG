@@ -7,6 +7,7 @@ from app.models import (  # noqa: F401
     CompanyQualification,
     ComplianceFinding,
     ComplianceMapping,
+    DeltaComparison,
     DiscoveryRun,
     EvidenceBundle,
     Finding,
