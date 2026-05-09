@@ -131,6 +131,9 @@ def test_evidence_manifest_collects_scan_evidence(db_session: Session) -> None:
     assert manifest["scan_id"] == scan.id
     assert manifest["evidence_count"] == 1
     assert manifest["missing_hash_count"] == 1
+    assert manifest["missing_related_entity_count"] == 1
+    assert manifest["evidence_types"] == {"axe_homepage": 1}
+    assert manifest["related_entity_types"] == {"missing": 1}
     assert manifest["items"][0]["evidence_type"] == "axe_homepage"
     assert manifest["items"][0]["scan_id"] == scan.id
     assert manifest["items"][0]["related_entity_type"] is None
@@ -152,6 +155,8 @@ def test_generate_json_report_for_scan_with_findings(db_session: Session) -> Non
     assert report.summary["finding_count"] == 1
     assert report.output["scan"]["id"] == scan.id
     assert report.output["findings"][0]["id"] == finding.id
+    assert report.output["evidence_quality"]["quality_status"] == "usable"
+    assert report.output["review_summary"]["total_review_items"] == 1
     assert report.output["no_legal_conclusion"] is True
 
 
@@ -188,12 +193,49 @@ def test_report_summary_counts_are_correct(db_session: Session) -> None:
         "compliance_mapping_count": 1,
         "review_item_count": 1,
         "evidence_count": 1,
+        "reviewed_finding_count": 0,
+        "rejected_finding_count": 0,
+        "pending_review_count": 1,
         "critical_count": 0,
         "high_count": 1,
         "medium_count": 0,
         "low_count": 0,
         "no_legal_conclusion": True,
     }
+
+
+def test_report_marks_rejected_finding_as_excluded(db_session: Session) -> None:
+    scan, finding, _ = _create_scan_fixture(db_session)
+    review_item = ReviewItem(
+        subject_type=ReviewSubjectType.finding,
+        subject_id=finding.id,
+        status=ReviewItemStatus.rejected,
+        reason_code="manual_reject",
+        priority=ReviewPriority.high,
+        evidence={"source": "test", "no_legal_conclusion": True},
+    )
+    db_session.add(review_item)
+    db_session.commit()
+
+    report = generate_scan_json_report(db_session, scan.id)
+    finding_output = report.output["findings"][0]
+
+    assert finding_output["review_outcome"] == "rejected"
+    assert finding_output["excluded_from_final_summary"] is True
+    assert report.output["rejected_finding_count"] == 1
+    assert report.output["reviewed_finding_count"] == 1
+    assert report.output["pending_review_count"] == 0
+
+
+def test_report_includes_evidence_quality_and_review_summary(db_session: Session) -> None:
+    scan, _, _ = _create_scan_fixture(db_session)
+
+    report = generate_scan_json_report(db_session, scan.id)
+
+    assert report.output["evidence_quality"]["scan_id"] == scan.id
+    assert report.output["evidence_quality"]["has_axe_evidence"] is True
+    assert report.output["review_summary"]["pending_count"] == 1
+    assert report.output["review_summary"]["has_blocking_reviews"] is True
 
 
 def test_list_reports_for_scan(db_session: Session) -> None:

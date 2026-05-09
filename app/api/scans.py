@@ -12,6 +12,14 @@ from app.services.browser_smoke_service import (
     ScanNotFoundError,
     run_browser_smoke_probe,
 )
+from app.services.evidence_quality_service import (
+    ScanNotFoundError as EvidenceQualityScanNotFoundError,
+    assess_scan_evidence_quality,
+)
+from app.services.review_finalization_service import (
+    ScanNotFoundError as ReviewSummaryScanNotFoundError,
+    summarize_scan_review_status,
+)
 from app.services.scan_service import LeadNotFoundError, ScanQueueError, create_scan_job
 
 router = APIRouter(prefix="/scans", tags=["scans"])
@@ -80,3 +88,29 @@ def run_axe_homepage(scan_id: str, db: Session = Depends(get_db)) -> dict[str, o
         "path_or_key": evidence.path_or_key,
         "metadata": evidence.evidence_metadata,
     }
+
+
+@router.get("/{scan_id}/evidence/quality")
+def get_scan_evidence_quality(
+    scan_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        return assess_scan_evidence_quality(db, scan_id)
+    except EvidenceQualityScanNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get("/{scan_id}/review/summary")
+def get_scan_review_summary(
+    scan_id: str, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    try:
+        return summarize_scan_review_status(db, scan_id)
+    except ReviewSummaryScanNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
