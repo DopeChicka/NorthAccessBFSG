@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import (
     ComplianceMapping,
     Finding,
+    Journey,
     Report,
     ReportStatus,
     ReportType,
@@ -46,6 +47,7 @@ def generate_scan_json_report(db: Session, scan_id: str) -> Report:
     try:
         generated_at = datetime.now(UTC)
         evidence_manifest = build_evidence_manifest(db, scan_id)
+        journeys = _list_journeys(db, scan_id)
         findings = _list_findings(db, scan_id)
         compliance_mappings = _list_compliance_mappings(db, findings)
         review_items = _list_review_items(db, scan, findings, compliance_mappings)
@@ -60,6 +62,7 @@ def generate_scan_json_report(db: Session, scan_id: str) -> Report:
             "report_type": ReportType.json.value,
             "generated_at": generated_at.isoformat(),
             "scan": _serialize_scan(scan),
+            "journeys": [_serialize_journey(journey) for journey in journeys],
             "findings": [_serialize_finding(finding) for finding in findings],
             "compliance_mappings": [
                 _serialize_compliance_mapping(mapping)
@@ -112,6 +115,15 @@ def _list_findings(db: Session, scan_id: str) -> list[Finding]:
         db.query(Finding)
         .filter(Finding.scan_id == scan_id)
         .order_by(Finding.created_at.asc(), Finding.id.asc())
+        .all()
+    )
+
+
+def _list_journeys(db: Session, scan_id: str) -> list[Journey]:
+    return (
+        db.query(Journey)
+        .filter(Journey.scan_id == scan_id)
+        .order_by(Journey.journey_type.asc(), Journey.id.asc())
         .all()
     )
 
@@ -239,6 +251,23 @@ def _serialize_finding(finding: Finding) -> dict[str, Any]:
         "evidence_metadata": finding.evidence_metadata,
         "created_at": finding.created_at.isoformat() if finding.created_at else None,
         "signal_only": True,
+        "no_legal_conclusion": True,
+    }
+
+
+def _serialize_journey(journey: Journey) -> dict[str, Any]:
+    return {
+        "id": journey.id,
+        "scan_id": journey.scan_id,
+        "journey_type": journey.journey_type.value,
+        "status": journey.status.value,
+        "start_url": journey.start_url,
+        "detected_url": journey.detected_url,
+        "signals": journey.signals,
+        "evidence": journey.evidence,
+        "created_at": journey.created_at.isoformat() if journey.created_at else None,
+        "updated_at": journey.updated_at.isoformat() if journey.updated_at else None,
+        "planned_signal_only": True,
         "no_legal_conclusion": True,
     }
 

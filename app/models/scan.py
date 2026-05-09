@@ -58,3 +58,6 @@ class Scan(Base):
     reports: Mapped[list["Report"]] = relationship(
         "Report", back_populates="scan", cascade="all, delete-orphan"
     )
+    journeys: Mapped[list["Journey"]] = relationship(
+        "Journey", back_populates="scan", cascade="all, delete-orphan"
+    )

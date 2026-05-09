@@ -20,6 +20,12 @@ class ScanEvidence(Base):
         String(36), ForeignKey("scans.id", ondelete="CASCADE"), nullable=False, index=True
     )
     evidence_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    related_entity_type: Mapped[str | None] = mapped_column(
+        String(80), nullable=True, index=True
+    )
+    related_entity_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
     path_or_key: Mapped[str] = mapped_column(Text, nullable=False)
     evidence_metadata: Mapped[dict[str, Any]] = mapped_column(
         JSON, default=dict, nullable=False

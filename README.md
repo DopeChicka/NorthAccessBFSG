@@ -18,6 +18,7 @@ app/
     discovery.py
     evidence.py
     health.py
+    journeys.py
     reports.py
     review.py
     scans.py
@@ -459,9 +460,28 @@ curl http://localhost:8000/reports/{report_id}
 curl http://localhost:8000/scans/{scan_id}/reports
 ```
 
-The evidence manifest lists stored `ScanEvidence` rows for the scan: evidence ID, evidence type, path or key, metadata, hash when already present, and creation time. It does not read large files or require filesystem access.
+The evidence manifest lists stored `ScanEvidence` rows for the scan: evidence ID, evidence type, scan ID, related entity fields when present, storage key/path, metadata, hash when already present, and creation time. It also includes `missing_hash_count`. It does not read large files or require filesystem access.
 
 This is JSON only. It is not a PDF, letter, legal advice, certification, or final applicability decision.
+
+## Journey Scan Foundation
+
+Journey planning creates deterministic planned journey rows for a scan from existing domain and website-probe signals. It does not crawl pages, run Playwright, submit forms, or automate checkout.
+
+Endpoints:
+
+```bash
+curl -X POST http://localhost:8000/scans/{scan_id}/journeys/plan
+curl http://localhost:8000/scans/{scan_id}/journeys
+```
+
+The planner always creates a homepage journey when a URL or domain is available. Shop, cart, checkout, booking, and login journeys are planned when matching website-probe signals exist. Search and contact-form journeys remain skipped placeholders until signals are available.
+
+Journeys are planned technical signals only. They are not legal conclusions, reports, PDFs, letters, or full journey automation.
+
+## Evidence Manifest Hardening
+
+Evidence manifests expose evidence rows with scan ID, related entity fields when present, storage key/path, metadata, hash when already present, creation time, and `missing_hash_count`. This PR does not read files or compute new file hashes.
 
 ## Delta Comparison Foundation
 
