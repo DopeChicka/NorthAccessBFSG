@@ -14,6 +14,7 @@ app/
     __init__.py
     compliance.py
     compliance_mapping.py
+    delta.py
     discovery.py
     evidence.py
     health.py
@@ -461,6 +462,20 @@ curl http://localhost:8000/scans/{scan_id}/reports
 The evidence manifest lists stored `ScanEvidence` rows for the scan: evidence ID, evidence type, path or key, metadata, hash when already present, and creation time. It does not read large files or require filesystem access.
 
 This is JSON only. It is not a PDF, letter, legal advice, certification, or final applicability decision.
+
+## Delta Comparison Foundation
+
+Delta comparison compares technical findings from a baseline scan against a target scan. It uses deterministic finding fingerprints to group matching findings without relying on database IDs or timestamps.
+
+Endpoints:
+
+```bash
+curl -X POST http://localhost:8000/scans/{target_scan_id}/delta/{baseline_scan_id}
+curl http://localhost:8000/delta/{comparison_id}
+curl http://localhost:8000/scans/{scan_id}/delta
+```
+
+The output groups findings as `new_findings`, `resolved_findings`, and `unchanged_findings`, with compact evidence and summary counts. This is a technical comparison only. It is not legal advice, certification, reports, PDFs, letters, or a final applicability decision.
 
 ## Validation
 

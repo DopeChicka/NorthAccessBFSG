@@ -5,6 +5,7 @@ from app.models.company_qualification import (
 )
 from app.models.compliance_finding import ComplianceFinding
 from app.models.compliance_mapping import ComplianceMapping
+from app.models.delta_comparison import DeltaComparison, DeltaComparisonStatus
 from app.models.discovery_run import DiscoveryRun, DiscoveryRunStatus
 from app.models.evidence_bundle import EvidenceBundle
 from app.models.finding import Finding
@@ -37,6 +38,8 @@ __all__ = [
     "CompanyQualificationStatus",
     "ComplianceFinding",
     "ComplianceMapping",
+    "DeltaComparison",
+    "DeltaComparisonStatus",
     "DiscoveryRun",
     "DiscoveryRunStatus",
     "EvidenceBundle",
