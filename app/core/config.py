@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +34,13 @@ class Settings(BaseSettings):
     website_probe_timeout_seconds: int = 10
     website_probe_user_agent: str = "NorthAccessBFSGBot/0.1"
     website_probe_max_body_bytes: int = 200_000
+    public_quick_check_timeout_seconds: int = 10
+    public_quick_check_user_agent: str = "NorthAccessBFSGQuickCheck/0.1"
+    public_quick_check_max_body_bytes: int = 200_000
+    frontend_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
     bfsg_microenterprise_employee_threshold: int = 10
     bfsg_microenterprise_revenue_threshold_eur: int = 2_000_000
     bfsg_microenterprise_balance_threshold_eur: int = 2_000_000
@@ -42,6 +50,13 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("frontend_origins", mode="before")
+    @classmethod
+    def parse_frontend_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 @lru_cache

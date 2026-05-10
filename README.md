@@ -19,6 +19,7 @@ app/
     evidence.py
     health.py
     journeys.py
+    public.py
     reports.py
     review.py
     scans.py
@@ -360,6 +361,30 @@ If disabled, the endpoint returns a clear service-unavailable error and does not
 These signals only help decide whether a future full scan may be worth scheduling. They are not accessibility results, legal conclusions, or BFSG violation findings. A full scan/audit stage comes later.
 
 This discovery layer does not scrape websites, does not perform reporting, and does not run accessibility scans for seed candidates automatically.
+
+## Public Quick Check
+
+`POST /public/quick-check` provides a lightweight technical pre-check for one URL/domain input.
+
+Request body:
+
+```json
+{ "url": "https://example.com" }
+```
+
+or
+
+```json
+{ "domain": "example.com" }
+```
+
+The endpoint normalizes domains to HTTPS URLs, performs one HTTP fetch, captures final URL, and returns checks for reachability, HTTPS, title, meta description, H1, HTML lang, impressum link, privacy link, and basic tracker-domain signals.
+
+The response is technical only and includes this disclaimer:
+
+```text
+Diese automatisierte Vorprüfung liefert technische Hinweise und ersetzt keine vollständige manuelle Barrierefreiheitsprüfung, keine Rechtsberatung und keine behördliche Zertifizierung.
+```
 
 ## Scan Readiness Gate
 
