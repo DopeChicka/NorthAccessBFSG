@@ -115,6 +115,32 @@ Expected response:
 
 The API waits for PostgreSQL and Redis to become healthy, connects with SQLAlchemy, and auto-creates the database tables on startup.
 
+## Runtime Start Commands
+
+Local Windows development:
+
+```powershell
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
+```
+
+Production command (hoster-neutral):
+
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Frontend CORS origins for deployment:
+
+```text
+FRONTEND_ORIGINS=https://datenpflegenord-website.luebeck-trading.workers.dev,https://datenpflegenord.de,https://www.datenpflegenord.de
+```
+
+Planned API domain:
+
+```text
+https://api.datenpflegenord.de
+```
+
 ## Lead Discovery Foundation
 
 The canonical raw city data file is:
