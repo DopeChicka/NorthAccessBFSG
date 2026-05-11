@@ -413,6 +413,22 @@ or
 
 The endpoint normalizes domains to HTTPS URLs, performs one HTTP fetch, captures final URL, and returns checks for reachability, HTTPS, title, meta description, H1, HTML lang, impressum link, privacy link, and basic tracker-domain signals.
 
+Public quick check requests are rate-limited per client IP to reduce abuse.
+
+Configuration:
+
+```text
+QUICK_CHECK_RATE_LIMIT_PER_MINUTE=10
+```
+
+If the limit is exceeded, the endpoint returns HTTP `429` with:
+
+```json
+{
+  "detail": "Zu viele Schnellcheck-Anfragen. Bitte versuchen Sie es später erneut."
+}
+```
+
 The response is technical only and includes this disclaimer:
 
 ```text

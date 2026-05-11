@@ -6,16 +6,18 @@ from fastapi.testclient import TestClient
 from app.api import public as public_api
 from app.api.public import router as public_router
 from app.core.config import settings
-from app.main import configure_cors
+from app.main import configure_cors, configure_quick_check_rate_limit
+from app.middleware.quick_check_rate_limit import RATE_LIMIT_MESSAGE
 from app.services.public_quick_check_service import (
     DISCLAIMER_TEXT,
     QuickCheckValidationError,
 )
 
 
-def _make_client() -> TestClient:
+def _make_client(*, quick_check_limit_per_minute: int = 10) -> TestClient:
     app = FastAPI()
     configure_cors(app, settings.frontend_origins)
+    configure_quick_check_rate_limit(app, quick_check_limit_per_minute)
     app.include_router(public_router)
     return TestClient(app)
 
@@ -109,6 +111,67 @@ def test_public_quick_check_endpoint_requires_input() -> None:
     response = client.post("/public/quick-check", json={})
 
     assert response.status_code == 422
+
+
+def test_public_quick_check_rate_limit_returns_429(monkeypatch) -> None:
+    def fake_run_public_quick_check(**kwargs) -> dict[str, object]:
+        return {
+            "status": "completed",
+            "inputUrl": "example.com",
+            "normalizedUrl": "https://example.com",
+            "scannedAt": "2026-05-10T10:00:00+00:00",
+            "summary": {
+                "critical": 0,
+                "serious": 0,
+                "moderate": 0,
+                "minor": 0,
+                "info": 0,
+            },
+            "score": {
+                "accessibility": 100,
+                "technical": 100,
+                "privacy": 100,
+                "seo": 100,
+            },
+            "checks": {
+                "accessibility": {
+                    "label": "Barrierefreiheit",
+                    "status": "checked",
+                    "findingsCount": 0,
+                },
+                "technical": {
+                    "label": "Technik",
+                    "https": True,
+                    "reachable": True,
+                    "finalUrl": "https://example.com",
+                },
+                "privacy": {
+                    "label": "Datenschutz-Hinweise",
+                    "impressumLink": True,
+                    "privacyLink": True,
+                    "detectedTrackers": [],
+                },
+                "seo": {
+                    "label": "SEO-Grundlagen",
+                    "title": True,
+                    "metaDescription": True,
+                    "h1": True,
+                    "htmlLang": True,
+                },
+            },
+            "findings": [],
+            "disclaimer": DISCLAIMER_TEXT,
+        }
+
+    monkeypatch.setattr(public_api, "run_public_quick_check", fake_run_public_quick_check)
+    client = _make_client(quick_check_limit_per_minute=1)
+
+    first = client.post("/public/quick-check", json={"domain": "example.com"})
+    second = client.post("/public/quick-check", json={"domain": "example.com"})
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.json()["detail"] == RATE_LIMIT_MESSAGE
 
 
 def test_public_quick_check_preflight_options_is_allowed() -> None:

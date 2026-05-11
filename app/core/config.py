@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     public_quick_check_timeout_seconds: int = 10
     public_quick_check_user_agent: str = "NorthAccessBFSGQuickCheck/0.1"
     public_quick_check_max_body_bytes: int = 200_000
+    quick_check_rate_limit_per_minute: int = 10
     frontend_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
