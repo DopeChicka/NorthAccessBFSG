@@ -132,13 +132,20 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
 Frontend CORS origins for deployment:
 
 ```text
-FRONTEND_ORIGINS=https://datenpflegenord-website.luebeck-trading.workers.dev,https://datenpflegenord.de,https://www.datenpflegenord.de
+FRONTEND_ORIGINS=https://datenpflegenord.de,https://www.datenpflegenord.de,https://datenpflegenord-website.luebeck-trading.workers.dev
 ```
 
 Planned API domain:
 
 ```text
 https://api.datenpflegenord.de
+```
+
+Deployment examples are available in:
+
+```text
+deploy/systemd/nordaudit-api.service.example
+deploy/caddy/Caddyfile.example
 ```
 
 ## Lead Discovery Foundation
