@@ -34,7 +34,10 @@ Finding foundation supports manual review workflows with structured metadata:
 - responsible role assignment:
   - `developer | content | design | ux | auditor`
 - `manual_review_required` defaults to `true`
+- findings are role-assigned for implementation ownership:
+  - `developer | content | design | ux | auditor`
 - legal disclaimer default:
   - `Technischer Hinweis, keine Rechtsberatung. Manuelle Prüfung empfohlen.`
 
 Evidence and compliance mapping remain reference/signal layers for human review and follow-up work.
+No overlay promise is part of the methodology.

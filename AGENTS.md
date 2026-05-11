@@ -112,4 +112,6 @@ Use it only as background reference if current docs are unclear.
 - Do not present overlay-style promises as a compliance solution.
 - Use clear disclaimers in finding/report outputs:
   - "Technischer Hinweis, keine Rechtsberatung. Manuelle Pruefung empfohlen."
+- Accessibility audit decisions remain human decisions and require manual review.
+- Findings should be assigned to responsible implementation roles (developer/content/design/ux/auditor).
 
