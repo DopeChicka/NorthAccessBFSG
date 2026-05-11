@@ -8,7 +8,12 @@ from app.models.compliance_mapping import ComplianceMapping
 from app.models.delta_comparison import DeltaComparison, DeltaComparisonStatus
 from app.models.discovery_run import DiscoveryRun, DiscoveryRunStatus
 from app.models.evidence_bundle import EvidenceBundle
-from app.models.finding import Finding
+from app.models.finding import (
+    DEFAULT_FINDING_LEGAL_DISCLAIMER,
+    Finding,
+    FindingCategory,
+    FindingResponsibleRole,
+)
 from app.models.journey import Journey, JourneyStatus, JourneyType
 from app.models.lead import Lead
 from app.models.lead_candidate import LeadCandidate
@@ -44,7 +49,10 @@ __all__ = [
     "DiscoveryRun",
     "DiscoveryRunStatus",
     "EvidenceBundle",
+    "DEFAULT_FINDING_LEGAL_DISCLAIMER",
     "Finding",
+    "FindingCategory",
+    "FindingResponsibleRole",
     "Journey",
     "JourneyStatus",
     "JourneyType",

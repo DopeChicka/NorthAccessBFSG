@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.core.celery import celery_app
 from app.db.session import SessionLocal
-from app.models import EvidenceBundle, Finding, Scan, ScanStatus
+from app.models import (
+    EvidenceBundle,
+    Finding,
+    FindingCategory,
+    FindingResponsibleRole,
+    Scan,
+    ScanStatus,
+)
 from app.services.evidence_service import persist_finding_evidence_refs, persist_scan_evidence
 from app.workers.playwright_engine import PlaywrightScanResult, run_accessibility_scan
 
@@ -89,13 +96,20 @@ def _persist_findings(
     db.flush()
 
     for engine_finding in scan_result.findings:
+        title = engine_finding.description or f"A11y rule: {engine_finding.rule_id}"
         finding = Finding(
             scan_id=scan_id,
+            category=FindingCategory.accessibility,
             rule_id=engine_finding.rule_id,
             severity=engine_finding.severity,
+            title=title[:255],
             description=engine_finding.description,
             help_url=engine_finding.help_url,
             wcag_refs=engine_finding.wcag_refs,
+            technical_evidence=engine_finding.evidence_metadata,
+            source_tool="playwright_engine",
+            recommendation="Manuelle Prüfung durchführen und technische Ursache priorisieren.",
+            responsible_role=FindingResponsibleRole.developer,
             confidence_score=engine_finding.confidence_score,
             evidence_metadata=engine_finding.evidence_metadata,
         )

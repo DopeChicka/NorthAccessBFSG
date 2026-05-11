@@ -4,7 +4,15 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.models import Finding, Journey, JourneyStatus, Scan, ScanEvidence
+from app.models import (
+    Finding,
+    FindingCategory,
+    FindingResponsibleRole,
+    Journey,
+    JourneyStatus,
+    Scan,
+    ScanEvidence,
+)
 from app.services.axe_homepage_service import (
     AxeHomepageResult,
     AxeHomepageRunner,
@@ -160,15 +168,22 @@ def _finding_from_violation(
         "sample_targets": _sample_node_targets(violation.nodes),
         "no_legal_conclusion": True,
     }
+    title = violation.description or f"Axe rule: {violation.rule_id}"
     return Finding(
         scan_id=journey.scan_id,
         journey_id=journey.id,
+        category=FindingCategory.accessibility,
         rule_id=violation.rule_id,
         severity=_SEVERITY_BY_AXE_IMPACT.get(impact, "info"),
+        title=title[:255],
         description=violation.description,
         help_url=violation.help_url,
         wcag_refs=violation.wcag_refs,
         evidence=finding_evidence,
+        technical_evidence=finding_evidence,
+        source_tool="axe_playwright",
+        recommendation="Manuelle Prüfung durchführen und technische Ursache priorisieren.",
+        responsible_role=FindingResponsibleRole.developer,
         confidence_score=_confidence_for_violation(
             impact=impact,
             node_count=node_count,

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 
 from app.core.browser_config import BrowserConfig, get_browser_config
-from app.models.finding import Finding
+from app.models.finding import Finding, FindingCategory, FindingResponsibleRole
 from app.models.scan import Scan, ScanStatus
 from app.models.scan_evidence import ScanEvidence
 from app.services.review_service import auto_create_review_item_for_finding
@@ -145,14 +145,21 @@ def _finding_from_violation(
         "sample_targets": _sample_node_targets(violation.nodes),
         "no_legal_conclusion": True,
     }
+    title = violation.description or f"Axe rule: {violation.rule_id}"
     return Finding(
         scan_id=scan.id,
+        category=FindingCategory.accessibility,
         rule_id=violation.rule_id,
         severity=_SEVERITY_BY_AXE_IMPACT.get(impact, "info"),
+        title=title[:255],
         description=violation.description,
         help_url=violation.help_url,
         wcag_refs=violation.wcag_refs,
         evidence=finding_evidence,
+        technical_evidence=finding_evidence,
+        source_tool="axe_playwright",
+        recommendation="Manuelle Prüfung durchführen und technische Ursache priorisieren.",
+        responsible_role=FindingResponsibleRole.developer,
         confidence_score=_confidence_for_violation(
             impact=impact,
             node_count=node_count,

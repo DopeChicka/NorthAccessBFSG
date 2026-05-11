@@ -9,6 +9,7 @@ from app.db.base import Base
 from app.models import (  # noqa: F401
     ComplianceMapping,
     EvidenceBundle,
+    DEFAULT_FINDING_LEGAL_DISCLAIMER,
     Finding,
     Journey,
     JourneyStatus,
@@ -171,6 +172,22 @@ def test_report_includes_compliance_mappings_and_review_items(
     assert report.output["compliance_mappings"][0]["reference_signal_only"] is True
     assert len(report.output["review_items"]) == 1
     assert report.output["review_items"][0]["human_workflow_only"] is True
+
+
+def test_report_finding_serialization_includes_methodology_fields(
+    db_session: Session,
+) -> None:
+    scan, finding, _ = _create_scan_fixture(db_session)
+
+    report = generate_scan_json_report(db_session, scan.id)
+    finding_payload = report.output["findings"][0]
+
+    assert finding_payload["id"] == finding.id
+    assert finding_payload["category"] == "accessibility"
+    assert finding_payload["manual_review_required"] is True
+    assert finding_payload["source_tool"] == "unknown"
+    assert finding_payload["responsible_role"] == "developer"
+    assert finding_payload["legal_disclaimer"] == DEFAULT_FINDING_LEGAL_DISCLAIMER
 
 
 def test_report_includes_journeys(db_session: Session) -> None:
