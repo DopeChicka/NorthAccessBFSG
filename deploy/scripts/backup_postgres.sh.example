@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Example backup script for local PostgreSQL on VPS.
+# Do not store real passwords in this script.
+# Use PGPASSWORD from environment or ~/.pgpass.
+
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:-northaccessbfsg}"
+DB_USER="${DB_USER:-northaccess}"
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/northaccessbfsg}"
+RETENTION_DAYS="${RETENTION_DAYS:-14}"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${TIMESTAMP}.sql.gz"
+
+mkdir -p "${BACKUP_DIR}"
+
+echo "Creating PostgreSQL backup: ${BACKUP_FILE}"
+pg_dump \
+  --host "${DB_HOST}" \
+  --port "${DB_PORT}" \
+  --username "${DB_USER}" \
+  --dbname "${DB_NAME}" \
+  --format=plain \
+  --no-owner \
+  --no-privileges | gzip > "${BACKUP_FILE}"
+
+echo "Cleaning backups older than ${RETENTION_DAYS} days from ${BACKUP_DIR}"
+find "${BACKUP_DIR}" -type f -name "${DB_NAME}_*.sql.gz" -mtime +"${RETENTION_DAYS}" -delete
+
+echo "Backup completed."

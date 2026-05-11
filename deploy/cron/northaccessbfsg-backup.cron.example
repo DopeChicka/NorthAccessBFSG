@@ -1,0 +1,2 @@
+# Example cron: run daily at 02:30 and write logs to /var/log/northaccessbfsg-backup.log
+30 2 * * * /bin/bash /opt/northaccessbfsg/deploy/scripts/backup_postgres.sh.example >> /var/log/northaccessbfsg-backup.log 2>&1

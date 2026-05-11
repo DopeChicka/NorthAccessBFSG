@@ -148,6 +148,57 @@ deploy/systemd/nordaudit-api.service.example
 deploy/caddy/Caddyfile.example
 ```
 
+## Production VPS Betrieb
+
+Live API domain:
+
+```text
+https://api.datenpflegenord.de
+```
+
+Service status pruefen:
+
+```bash
+sudo systemctl status nordaudit-api
+```
+
+Service neu starten:
+
+```bash
+sudo systemctl restart nordaudit-api
+```
+
+Logs anzeigen:
+
+```bash
+sudo journalctl -u nordaudit-api -f
+```
+
+Public quick-check live testen:
+
+```bash
+curl -X POST https://api.datenpflegenord.de/public/quick-check \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"example.com"}'
+```
+
+PostgreSQL Backup manuell ausfuehren:
+
+```bash
+bash deploy/scripts/backup_postgres.sh.example
+```
+
+Backup cron example:
+
+```text
+deploy/cron/northaccessbfsg-backup.cron.example
+```
+
+Wichtig:
+
+- `.env` niemals committen.
+- Secrets (DB credentials, tokens, API keys) nur auf dem VPS in `.env` oder sicherem Secret Store halten.
+
 ## Lead Discovery Foundation
 
 The canonical raw city data file is:
